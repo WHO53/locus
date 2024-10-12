@@ -35,22 +35,6 @@ static void handle_xdg_toplevel_configure(void *data,
         struct xdg_toplevel *xdg_toplevel,
         int32_t width, int32_t height,
         struct wl_array *states) {
-    Locus *app = data;
-    if (width > 0 && height > 0) {
-        app->width = width;
-        app->height = height;
-        // Recreate buffer with new size
-        if (app->buffer) {
-            wl_buffer_destroy(app->buffer);
-        }
-        if (app->cairo_surface) {
-            cairo_surface_destroy(app->cairo_surface);
-        }
-        if (app->cr) {
-            cairo_destroy(app->cr);
-        }
-        create_buffer(app);
-    }
 }
 
 static void handle_xdg_toplevel_close(void *data,
@@ -58,6 +42,36 @@ static void handle_xdg_toplevel_close(void *data,
     Locus *app = data;
     app->running = 0;
 }
+
+static void handle_geometry(void *data, struct wl_output *output,
+        int32_t x, int32_t y, int32_t physical_width,
+        int32_t physical_height, int32_t subpixel,
+        const char *make, const char *model,
+        int32_t transform) {
+}
+
+static void handle_mode(void *data, struct wl_output *output,
+        uint32_t flags, int32_t width, int32_t height,
+        int32_t refresh) {
+    Locus *app = data;
+    if (flags & WL_OUTPUT_MODE_CURRENT) {
+        app->screen_width = width;
+        app->screen_height = height;
+    }
+}
+
+static void handle_done(void *data, struct wl_output *output) {
+}
+
+static void handle_scale(void *data, struct wl_output *output, int32_t factor) {
+}
+
+static const struct wl_output_listener output_listener = {
+    .geometry = handle_geometry,
+    .mode = handle_mode,
+    .done = handle_done,
+    .scale = handle_scale,
+};
 
 static const struct xdg_toplevel_listener xdg_toplevel_listener = {
     .configure = handle_xdg_toplevel_configure,
@@ -103,6 +117,10 @@ static void registry_global(void *data, struct wl_registry *registry,
     if (strcmp(interface, wl_compositor_interface.name) == 0) {
         app->compositor =
             wl_registry_bind(registry, name, &wl_compositor_interface, 1);
+    } else if (strcmp(interface, wl_output_interface.name) == 0) {
+        app->output=
+            wl_registry_bind(registry, name, &wl_output_interface, 2);
+        wl_output_add_listener(app->output, &output_listener, app);
     } else if (strcmp(interface, xdg_wm_base_interface.name) == 0) {
         app->xdg_wm_base =
             wl_registry_bind(registry, name, &xdg_wm_base_interface, 1);
@@ -155,10 +173,8 @@ static void create_buffer(Locus *app) {
     app->cr = cairo_create(app->cairo_surface);
 }
 
-int locus_init(Locus *app, int width, int height) {
+int locus_init(Locus *app, int width_percent, int height_percent) {
     memset(app, 0, sizeof(Locus));
-    app->width = width;
-    app->height = height;
     app->running = 1;
 
     app->display = wl_display_connect(NULL);
@@ -171,10 +187,24 @@ int locus_init(Locus *app, int width, int height) {
     wl_registry_add_listener(app->registry, &registry_listener, app);
     wl_display_roundtrip(app->display);
 
-    if (!app->compositor || !app->xdg_wm_base || !app->shm) {
+    if (!app->compositor || !app->xdg_wm_base || !app->shm ) {
         fprintf(stderr, "Failed to bind Wayland interfaces\n");
         return 0;
     }
+
+    if (!app->output) {
+        fprintf(stderr, "wl_output not found\n");
+        return 0;
+    }
+    wl_display_roundtrip(app->display);
+
+    if (app->screen_width == 0 || app->screen_height == 0) {
+        fprintf(stderr, "Failed to retrieve dimensions\n");
+        return 0;
+    }
+    
+    app->width = (app->screen_width * width_percent) / 100;
+    app->height = (app->screen_height * height_percent) / 100;
 
     create_buffer(app);
     return 1;
@@ -235,6 +265,8 @@ void locus_cleanup(Locus *app) {
         xdg_surface_destroy(app->xdg_surface);
     if (app->layer_surface)
         zwlr_layer_surface_v1_destroy(app->layer_surface);
+    if (app-> output)
+        wl_output_destroy(app->output);
     wl_surface_destroy(app->surface);
     xdg_wm_base_destroy(app->xdg_wm_base);
     wl_compositor_destroy(app->compositor);

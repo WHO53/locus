@@ -10,6 +10,7 @@ typedef struct {
     struct wl_display *display;
     struct wl_registry *registry;
     struct wl_compositor *compositor;
+    struct wl_output *output;
     struct xdg_wm_base *xdg_wm_base;
     struct wl_surface *surface;
     struct xdg_surface *xdg_surface;
@@ -21,6 +22,7 @@ typedef struct {
     cairo_surface_t *cairo_surface;
     cairo_t *cr;
     int width, height;
+    int screen_width, screen_height;
     void *shm_data;
     int configured;
     int running;
