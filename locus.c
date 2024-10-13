@@ -71,19 +71,32 @@ static void touch_handle_down(void *data, struct wl_touch *wl_touch,
                               uint32_t serial, uint32_t time,
                               struct wl_surface *surface, int32_t id,
                               wl_fixed_t x, wl_fixed_t y) {
+    Locus *app = data;
     double touch_x = wl_fixed_to_double(x);
     double touch_y = wl_fixed_to_double(y);
+
+    if(app->touch_callback) {
+        app->touch_callback(id, touch_x, touch_y, 0);
+    }
 }
 
 static void touch_handle_up(void *data, struct wl_touch *wl_touch,
                             uint32_t serial, uint32_t time, int32_t id) {
+    Locus *app = data;
+    if(app->touch_callback) {
+        app->touch_callback(id, 0, 0, 2);
+    }
 }
 
 static void touch_handle_motion(void *data, struct wl_touch *wl_touch,
                                 uint32_t time, int32_t id, wl_fixed_t x,
                                 wl_fixed_t y) {
+    Locus *app = data;
     double touch_x = wl_fixed_to_double(x);
     double touch_y = wl_fixed_to_double(y);
+    if(app->touch_callback) {
+        app->touch_callback(id, touch_x, touch_y, 1);
+    }
 }
 
 static void touch_handle_frame(void *data, struct wl_touch *wl_touch) {
@@ -290,6 +303,12 @@ void locus_set_draw_callback(Locus *app,
         void (*draw_callback)(cairo_t *cr, int width,
             int height)) {
     app->draw_callback = draw_callback;
+}
+
+void locus_set_touch_callback(Locus *app,
+        void (*touch_callback)(int32_t id, double x,
+            double y, int32_t state)) {
+    app->touch_callback = touch_callback;
 }
 
 void locus_run(Locus *app) {
