@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <wayland-client-protocol.h>
 
 static void handle_ping(void *data, struct xdg_wm_base *xdg_wm_base,
         uint32_t serial) {
@@ -66,11 +67,59 @@ static void handle_done(void *data, struct wl_output *output) {
 static void handle_scale(void *data, struct wl_output *output, int32_t factor) {
 }
 
+static void touch_handle_down(void *data, struct wl_touch *wl_touch,
+                              uint32_t serial, uint32_t time,
+                              struct wl_surface *surface, int32_t id,
+                              wl_fixed_t x, wl_fixed_t y) {
+    double touch_x = wl_fixed_to_double(x);
+    double touch_y = wl_fixed_to_double(y);
+}
+
+static void touch_handle_up(void *data, struct wl_touch *wl_touch,
+                            uint32_t serial, uint32_t time, int32_t id) {
+}
+
+static void touch_handle_motion(void *data, struct wl_touch *wl_touch,
+                                uint32_t time, int32_t id, wl_fixed_t x,
+                                wl_fixed_t y) {
+    double touch_x = wl_fixed_to_double(x);
+    double touch_y = wl_fixed_to_double(y);
+}
+
+static void touch_handle_frame(void *data, struct wl_touch *wl_touch) {
+}
+
+static const struct wl_touch_listener touch_listener = {
+    .down = touch_handle_down,
+    .up = touch_handle_up,
+    .motion = touch_handle_motion,
+    .frame = touch_handle_frame,
+};
+
+static void handle_seat_capabilities(void *data, struct wl_seat *seat, 
+        uint32_t capabilities) {
+    Locus *app = data;
+
+    if (capabilities && WL_SEAT_CAPABILITY_TOUCH) {
+        app->touch = wl_seat_get_touch(seat);
+        wl_touch_add_listener(app->touch, &touch_listener, app);
+    }
+}
+
+static void handle_seat_name(void *data, struct wl_seat *seat, 
+        const char *name) {
+}
+
 static const struct wl_output_listener output_listener = {
     .geometry = handle_geometry,
     .mode = handle_mode,
     .done = handle_done,
     .scale = handle_scale,
+};
+
+static const struct wl_seat_listener seat_listener = {
+    .capabilities = handle_seat_capabilities,
+    .name = handle_seat_name,
 };
 
 static const struct xdg_toplevel_listener xdg_toplevel_listener = {
@@ -130,6 +179,10 @@ static void registry_global(void *data, struct wl_registry *registry,
     } else if (strcmp(interface, zwlr_layer_shell_v1_interface.name) == 0) {
         app->layer_shell =
             wl_registry_bind(registry, name, &zwlr_layer_shell_v1_interface, 1);
+    } else if (strcmp(interface, wl_seat_interface.name) == 0) {
+        app->seat =
+            wl_registry_bind(registry, name, &wl_seat_interface, 7);
+        wl_seat_add_listener(app->seat, &seat_listener, app);
     }
 }
 

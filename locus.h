@@ -11,6 +11,8 @@ typedef struct {
     struct wl_registry *registry;
     struct wl_compositor *compositor;
     struct wl_output *output;
+    struct wl_seat *seat;
+    struct wl_touch *touch;
     struct xdg_wm_base *xdg_wm_base;
     struct wl_surface *surface;
     struct xdg_surface *xdg_surface;
