@@ -404,6 +404,20 @@ void locus_set_touch_callback(Locus *app,
     app->touch_callback = touch_callback;
 }
 
+void locus_set_partial_draw_callback(Locus *app,
+        void (*partial_draw_callback)(cairo_t *cr, int x, int y, 
+            int width, int height)) {
+    app->partial_draw_callback = partial_draw_callback;
+}
+
+void locus_req_partial_redraw(Locus *app, int x, int y, int width, int height) {
+    app->redraw_partial = 1;
+    app->redraw_x = x;
+    app->redraw_y = y;
+    app->redraw_width = width;
+    app->redraw_height = height;
+}
+
 void locus_run(Locus *app) {
     while (!app->configured) {
         wl_display_dispatch(app->display);
@@ -424,6 +438,13 @@ void locus_run(Locus *app) {
             wl_surface_damage(app->surface, 0, 0, app->width, app->height);
             wl_surface_commit(app->surface);
             app->redraw = 0;
+        } else if (app->redraw_partial) {
+            app->partial_draw_callback(app->cr_back, app->redraw_x, app->redraw_y, app->redraw_width, app->redraw_height);
+            cairo_surface_flush(app->cairo_surface_back);
+            wl_surface_attach(app->surface, app->buffer_back, 0, 0);
+            wl_surface_damage(app->surface, app->redraw_x, app->redraw_y, app->redraw_width, app->redraw_height);
+            wl_surface_commit(app->surface);
+            app->redraw_partial = 0;
         }
     }
 }

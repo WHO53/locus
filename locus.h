@@ -33,8 +33,11 @@ typedef struct {
     int configured;
     int running;
     int redraw;
+    int redraw_partial;
+    int redraw_x, redraw_y, redraw_width, redraw_height;
     void (*draw_callback)(cairo_t *cr, int width, int height);
     void (*touch_callback)(int32_t id, double x, double y, int32_t state);
+    void (*partial_draw_callback)(cairo_t *cr, int x, int y, int width, int height);
 } Locus;
 
 // Initialize the Wayland application
@@ -54,6 +57,12 @@ void locus_set_draw_callback(Locus *app,
 void locus_set_touch_callback(Locus *app,
         void (*touch_callback)(int32_t id, double x,
             double y, int32_t state));
+
+void locus_set_partial_draw_callback(Locus *app,
+        void (*partial_draw_callback)(cairo_t *cr, int x, int y, 
+            int width, int height));
+
+void locus_req_partial_redraw(Locus *app, int x, int y, int width, int height);
 
 // Run the main loop
 void locus_run(Locus *app);
