@@ -328,20 +328,50 @@ void locus_run(Locus *app) {
 }
 
 void locus_cleanup(Locus *app) {
-    cairo_destroy(app->cr);
-    cairo_surface_destroy(app->cairo_surface);
-    wl_buffer_destroy(app->buffer);
-    if (app->xdg_toplevel)
+    if (app->cr) {
+        cairo_destroy(app->cr);
+    }
+    if (app->cairo_surface) {
+        cairo_surface_destroy(app->cairo_surface);
+        if (app->shm_data) {
+            munmap(app->shm_data, app->width * app->height * 4);
+        }
+    }
+    if (app->buffer) {
+        wl_buffer_destroy(app->buffer);
+    }
+    if (app->xdg_toplevel) {
         xdg_toplevel_destroy(app->xdg_toplevel);
-    if (app->xdg_surface)
+    }
+    if (app->xdg_surface) {
         xdg_surface_destroy(app->xdg_surface);
-    if (app->layer_surface)
+    }
+    if (app->layer_surface) {
         zwlr_layer_surface_v1_destroy(app->layer_surface);
-    if (app-> output)
+    }
+    if (app->output) {
         wl_output_destroy(app->output);
-    wl_surface_destroy(app->surface);
-    xdg_wm_base_destroy(app->xdg_wm_base);
-    wl_compositor_destroy(app->compositor);
-    wl_registry_destroy(app->registry);
-    wl_display_disconnect(app->display);
+    }
+    if (app->surface) {
+        wl_surface_destroy(app->surface);
+    }
+    if (app->xdg_wm_base) {
+        xdg_wm_base_destroy(app->xdg_wm_base);
+    }
+    if (app->compositor) {
+        wl_compositor_destroy(app->compositor);
+    }
+    if (app->registry) {
+        wl_registry_destroy(app->registry);
+    }
+    if (app->seat) {
+        wl_seat_destroy(app->seat);
+    }
+    if (app->touch) {
+        wl_touch_destroy(app->touch);
+    }
+    
+    if (app->display) {
+        wl_display_disconnect(app->display);
+    }
 }
