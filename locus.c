@@ -424,7 +424,7 @@ void locus_run(Locus *app) {
     }
 
     app->draw_callback(app->cr, app->width, app->height);
-    app->redraw = 0;
+    app->redraw = 1;
     cairo_surface_flush(app->cairo_surface);
     wl_surface_attach(app->surface, app->buffer, 0, 0);
     wl_surface_damage(app->surface, 0, 0, app->width, app->height);
