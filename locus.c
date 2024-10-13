@@ -85,7 +85,7 @@ static void touch_handle_up(void *data, struct wl_touch *wl_touch,
                             uint32_t serial, uint32_t time, int32_t id) {
     Locus *app = data;
     if(app->touch_callback) {
-        app->touch_callback(id, 0, 0, 2);
+        app->touch_callback(id, 0, 0, 1);
     }
 }
 
@@ -96,7 +96,7 @@ static void touch_handle_motion(void *data, struct wl_touch *wl_touch,
     double touch_x = wl_fixed_to_double(x);
     double touch_y = wl_fixed_to_double(y);
     if(app->touch_callback) {
-        app->touch_callback(id, touch_x, touch_y, 1);
+        app->touch_callback(id, touch_x, touch_y, 2);
     }
 }
 
