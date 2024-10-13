@@ -1,4 +1,5 @@
 #include "locus.h"
+#include <cairo/cairo.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -214,29 +215,121 @@ static void create_buffer(Locus *app) {
     int size = stride * app->height;
 
     char filename[] = "/tmp/wayland-shm-XXXXXX";
-    int fd = mkstemp(filename);
-    if (fd < 0) {
-        fprintf(stderr, "Failed to create temp file\n");
+    char filename_back[] = "/tmp/wayland-shm-back-XXXXXX";
+    
+    int fd_front = mkstemp(filename);
+    if (fd_front < 0) {
+        fprintf(stderr, "Failed to create temp file for front buffer\n");
         exit(1);
     }
     unlink(filename);
-    ftruncate(fd, size);
 
-    app->shm_data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if (app->shm_data == MAP_FAILED) {
-        fprintf(stderr, "mmap failed\n");
+    if (ftruncate(fd_front, size) == -1) {
+        fprintf(stderr, "Failed to set size for front buffer temp file\n");
+        close(fd_front);
         exit(1);
     }
 
-    struct wl_shm_pool *pool = wl_shm_create_pool(app->shm, fd, size);
-    app->buffer = wl_shm_pool_create_buffer(pool, 0, app->width, app->height,
+    app->shm_data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd_front, 0);
+    if (app->shm_data == MAP_FAILED) {
+        fprintf(stderr, "mmap failed for front buffer\n");
+        close(fd_front);
+        exit(1);
+    }
+
+    struct wl_shm_pool *pool_front = wl_shm_create_pool(app->shm, fd_front, size);
+    if (!pool_front) {
+        fprintf(stderr, "Failed to create Wayland shared memory pool for front buffer\n");
+        munmap(app->shm_data, size);
+        close(fd_front);
+        exit(1);
+    }
+
+    app->buffer = wl_shm_pool_create_buffer(pool_front, 0, app->width, app->height,
             stride, WL_SHM_FORMAT_ARGB8888);
-    wl_shm_pool_destroy(pool);
-    close(fd);
+    if (!app->buffer) {
+        fprintf(stderr, "Failed to create Wayland buffer for front buffer\n");
+        wl_shm_pool_destroy(pool_front);
+        munmap(app->shm_data, size);
+        close(fd_front);
+        exit(1);
+    }
+
+    wl_shm_pool_destroy(pool_front);
+    close(fd_front);
+
+    int fd_back = mkstemp(filename_back);
+    if (fd_back < 0) {
+        fprintf(stderr, "Failed to create temp file for back buffer\n");
+        exit(1);
+    }
+    unlink(filename_back);
+
+    if (ftruncate(fd_back, size) == -1) {
+        fprintf(stderr, "Failed to set size for back buffer temp file\n");
+        close(fd_back);
+        exit(1);
+    }
+
+    app->shm_data_back = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd_back, 0);
+    if (app->shm_data_back == MAP_FAILED) {
+        fprintf(stderr, "mmap failed for back buffer\n");
+        close(fd_back);
+        exit(1);
+    }
+
+    struct wl_shm_pool *pool_back = wl_shm_create_pool(app->shm, fd_back, size);
+    if (!pool_back) {
+        fprintf(stderr, "Failed to create Wayland shared memory pool for back buffer\n");
+        munmap(app->shm_data_back, size);
+        close(fd_back);
+        exit(1);
+    }
+
+    app->buffer_back = wl_shm_pool_create_buffer(pool_back, 0, app->width, app->height,
+            stride, WL_SHM_FORMAT_ARGB8888);
+    if (!app->buffer_back) {
+        fprintf(stderr, "Failed to create Wayland buffer for back buffer\n");
+        wl_shm_pool_destroy(pool_back);
+        munmap(app->shm_data_back, size);
+        close(fd_back);
+        exit(1);
+    }
+
+    wl_shm_pool_destroy(pool_back);
+    close(fd_back);
 
     app->cairo_surface = cairo_image_surface_create_for_data(
             app->shm_data, CAIRO_FORMAT_ARGB32, app->width, app->height, stride);
+    if (!app->cairo_surface) {
+        fprintf(stderr, "Failed to create Cairo surface for front buffer\n");
+        exit(1);
+    }
+
+    app->cairo_surface_back = cairo_image_surface_create_for_data(
+            app->shm_data_back, CAIRO_FORMAT_ARGB32, app->width, app->height, stride);
+    if (!app->cairo_surface_back) {
+        fprintf(stderr, "Failed to create Cairo surface for back buffer\n");
+        cairo_surface_destroy(app->cairo_surface);
+        exit(1);
+    }
+
     app->cr = cairo_create(app->cairo_surface);
+    if (!app->cr) {
+        fprintf(stderr, "Failed to create Cairo context for front buffer\n");
+        cairo_surface_destroy(app->cairo_surface);
+        cairo_surface_destroy(app->cairo_surface_back);
+        exit(1);
+    }
+
+    app->cr_back = cairo_create(app->cairo_surface_back);
+    if (!app->cr_back) {
+        fprintf(stderr, "Failed to create Cairo context for back buffer\n");
+        cairo_destroy(app->cr);
+        cairo_surface_destroy(app->cairo_surface);
+        cairo_surface_destroy(app->cairo_surface_back);
+        exit(1);
+    }
 }
 
 int locus_init(Locus *app, int width_percent, int height_percent) {
@@ -317,13 +410,21 @@ void locus_run(Locus *app) {
     }
 
     app->draw_callback(app->cr, app->width, app->height);
+    app->redraw = 0;
     cairo_surface_flush(app->cairo_surface);
     wl_surface_attach(app->surface, app->buffer, 0, 0);
     wl_surface_damage(app->surface, 0, 0, app->width, app->height);
     wl_surface_commit(app->surface);
 
     while (app->running && wl_display_dispatch(app->display) != -1) {
-        // This space intentionally left blank
+        if (app->redraw) {
+            app->draw_callback(app->cr_back, app->width, app->height);
+            cairo_surface_flush(app->cairo_surface_back);
+            wl_surface_attach(app->surface, app->buffer_back, 0, 0);
+            wl_surface_damage(app->surface, 0, 0, app->width, app->height);
+            wl_surface_commit(app->surface);
+            app->redraw = 0;
+        }
     }
 }
 
@@ -331,14 +432,38 @@ void locus_cleanup(Locus *app) {
     if (app->cr) {
         cairo_destroy(app->cr);
     }
+    if (app->cr_back) {
+        cairo_destroy(app->cr_back);
+    }
     if (app->cairo_surface) {
         cairo_surface_destroy(app->cairo_surface);
         if (app->shm_data) {
             munmap(app->shm_data, app->width * app->height * 4);
         }
     }
+    if (app->cairo_surface_back) {
+        cairo_surface_destroy(app->cairo_surface_back);
+        if (app->shm_data_back) {
+            munmap(app->shm_data_back, app->width * app->height * 4);
+        }
+    }
     if (app->buffer) {
         wl_buffer_destroy(app->buffer);
+    }
+    if (app->buffer_back) {
+        wl_buffer_destroy(app->buffer_back);
+    }
+    if (app->xdg_toplevel) {
+        xdg_toplevel_destroy(app->xdg_toplevel);
+    }
+    if (app->xdg_surface) {
+        xdg_surface_destroy(app->xdg_surface);
+    }
+    if (app->layer_surface) {
+        zwlr_layer_surface_v1_destroy(app->layer_surface);
+    }
+    if (app->output) {
+        wl_output_destroy(app->output);
     }
     if (app->xdg_toplevel) {
         xdg_toplevel_destroy(app->xdg_toplevel);
