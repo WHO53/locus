@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <wayland-client-core.h>
 #include <wayland-client-protocol.h>
 
 static void handle_ping(void *data, struct xdg_wm_base *xdg_wm_base,
@@ -430,7 +431,11 @@ void locus_run(Locus *app) {
     wl_surface_damage(app->surface, 0, 0, app->width, app->height);
     wl_surface_commit(app->surface);
 
-    while (app->running && wl_display_dispatch(app->display) != -1) {
+    while (app->running) {
+        while (wl_display_prepare_read(app->display) != 0) {
+            wl_display_dispatch_pending(app->display);
+        }
+        wl_display_flush(app->display);
         if (app->redraw) {
             app->draw_callback(app->cr_back, app->width, app->height);
             cairo_surface_flush(app->cairo_surface_back);
@@ -446,6 +451,8 @@ void locus_run(Locus *app) {
             wl_surface_commit(app->surface);
             app->redraw_partial = 0;
         }
+        wl_display_read_events(app->display);
+        wl_display_dispatch_pending(app->display);
     }
 }
 
