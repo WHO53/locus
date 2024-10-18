@@ -40,7 +40,8 @@ typedef struct {
     void (*partial_draw_callback)(cairo_t *cr, int x, int y, int width, int height);
 } Locus;
 
-// Initialize the Wayland application
+// Initialize the Wayland application, the width amd height are % of total height & width of screen
+// TODO: add fractional scale support
 int locus_init(Locus *app, int width, int height);
 
 // Create a regular window
@@ -54,14 +55,17 @@ void locus_set_draw_callback(Locus *app,
         void (*draw_callback)(cairo_t *cr, int width,
             int height));
 
+// Set the touch callback function
 void locus_set_touch_callback(Locus *app,
         void (*touch_callback)(int32_t id, double x,
             double y, int32_t state));
 
+// Set the partial redraw callback function
 void locus_set_partial_draw_callback(Locus *app,
         void (*partial_draw_callback)(cairo_t *cr, int x, int y, 
             int width, int height));
 
+// request partial redraw of certain region
 void locus_req_partial_redraw(Locus *app, int x, int y, int width, int height);
 
 // Run the main loop
