@@ -2,7 +2,7 @@ NAME=locus
 BIN=${NAME}
 SRC=.
 
-PKGS = wayland-client cairo pangocairo wayland-protocols
+PKGS = wayland-client cairo wayland-protocols
 
 LOCUS_SOURCES += $(wildcard $(SRC)/*.c)
 LOCUS_HEADERS += $(wildcard $(SRC)/*.h)

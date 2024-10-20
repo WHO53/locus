@@ -1,0 +1,46 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-std=gnu99",
+      "-Wall",
+      "-g",
+      "-DWITH_WAYLAND_SHM",
+      "-DLAYOUT=\"layout..h\"",
+      "-DKEYMAP=\"keymap..h\"",
+      "-I/usr/include/cairo",
+      "-I/usr/include/libpng16",
+      "-I/usr/include/freetype2",
+      "-I/usr/include/pixman-1",
+      "-c",
+      "-o",
+      "locus.o",
+      "locus.c"
+    ],
+    "directory": "/home/droidian/temp/locus",
+    "file": "/home/droidian/temp/locus/locus.c",
+    "output": "/home/droidian/temp/locus/locus.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-std=gnu99",
+      "-Wall",
+      "-g",
+      "-DWITH_WAYLAND_SHM",
+      "-DLAYOUT=\"layout..h\"",
+      "-DKEYMAP=\"keymap..h\"",
+      "-I/usr/include/cairo",
+      "-I/usr/include/libpng16",
+      "-I/usr/include/freetype2",
+      "-I/usr/include/pixman-1",
+      "-c",
+      "-o",
+      "test.o",
+      "test.c"
+    ],
+    "directory": "/home/droidian/temp/locus",
+    "file": "/home/droidian/temp/locus/test.c",
+    "output": "/home/droidian/temp/locus/test.o"
+  }
+]
