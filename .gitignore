@@ -4,5 +4,6 @@
 *-client-protocol.h
 .gdb_history
 *.log
+*.so
 .cache/
 test*

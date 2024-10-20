@@ -1,0 +1,11 @@
+prefix=/usr
+libdir=${prefix}/lib
+incdir=${prefix}/include/locus
+
+Name: Locus
+Description: A library for creating simple wayland apps with cairo
+Version: 0.1.0
+Requires: wayland-client cairo wayland-protocols
+Libs: -L${libdir} -llocus
+Cflags: -I${incdir}
+
