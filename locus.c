@@ -423,14 +423,7 @@ void locus_run(Locus *app) {
     while (!app->configured) {
         wl_display_dispatch(app->display);
     }
-
-    app->draw_callback(app->cr, app->width, app->height);
     app->redraw = 1;
-    cairo_surface_flush(app->cairo_surface);
-    wl_surface_attach(app->surface, app->buffer, 0, 0);
-    wl_surface_damage(app->surface, 0, 0, app->width, app->height);
-    wl_surface_commit(app->surface);
-
     while (app->running) {
         while (wl_display_prepare_read(app->display) != 0) {
             wl_display_dispatch_pending(app->display);
