@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <time.h>
 #include <unistd.h>
 #include <wayland-client-core.h>
 #include <wayland-client-protocol.h>
@@ -425,10 +426,13 @@ void locus_run(Locus *app) {
     }
     app->redraw = 1;
     while (app->running) {
-        while (wl_display_prepare_read(app->display) != 0) {
+        if (wl_display_prepare_read(app->display) != 0) {
             wl_display_dispatch_pending(app->display);
+        } else {
+            wl_display_flush(app->display);
+            struct timespec ts = {0, 350000000};
+            nanosleep(&ts, NULL);
         }
-        wl_display_flush(app->display);
         if (app->redraw) {
             app->draw_callback(app->cr_back, app->width, app->height);
             cairo_surface_flush(app->cairo_surface_back);
