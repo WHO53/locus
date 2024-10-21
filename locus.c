@@ -441,6 +441,12 @@ void locus_run(Locus *app) {
             wl_surface_commit(app->surface);
             app->redraw = 0;
         } else if (app->redraw_partial) {
+            cairo_save(app->cr_back);
+            cairo_set_operator(app->cr_back, CAIRO_OPERATOR_CLEAR);
+            cairo_rectangle(app->cr_back, app->redraw_x, app->redraw_y, app->redraw_width, app->redraw_height);
+            cairo_fill(app->cr_back);
+            cairo_restore(app->cr_back);
+
             app->partial_draw_callback(app->cr_back, app->redraw_x, app->redraw_y, app->redraw_width, app->redraw_height);
             cairo_surface_flush(app->cairo_surface_back);
             wl_surface_attach(app->surface, app->buffer_back, 0, 0);
