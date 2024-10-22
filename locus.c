@@ -7,8 +7,6 @@
 #include <sys/mman.h>
 #include <time.h>
 #include <unistd.h>
-#include <wayland-client-core.h>
-#include <wayland-client-protocol.h>
 
 static void handle_ping(void *data, struct xdg_wm_base *xdg_wm_base,
         uint32_t serial) {
@@ -386,12 +384,21 @@ void locus_create_window(Locus *app, const char *title) {
 void locus_create_layer_surface(Locus *app, uint32_t layer, uint32_t anchor) {
     app->surface = wl_compositor_create_surface(app->compositor);
     app->layer_surface = zwlr_layer_shell_v1_get_layer_surface(
-            app->layer_shell, app->surface, NULL, layer, "wayland-app-layer");
+            app->layer_shell, app->surface, NULL, layer, "locus-layer");
     zwlr_layer_surface_v1_set_size(app->layer_surface, app->width, app->height);
     zwlr_layer_surface_v1_set_anchor(app->layer_surface, anchor);
     zwlr_layer_surface_v1_add_listener(app->layer_surface,
             &layer_surface_listener, app);
     wl_surface_commit(app->surface);
+}
+
+void locus_layer_surface_new_size(Locus *app, int new_width, int new_height) {
+    if (app->layer_surface) {
+        app->width = (app->screen_width * new_width) / 100;
+        app->height = (app->screen_height * new_height) / 100;
+        zwlr_layer_surface_v1_set_size(app->layer_surface, app->width, app->height);
+        create_buffer(app);
+    }
 }
 
 void locus_set_draw_callback(Locus *app,

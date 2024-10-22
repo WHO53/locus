@@ -40,16 +40,12 @@ typedef struct {
     void (*partial_draw_callback)(cairo_t *cr, int x, int y, int width, int height);
 } Locus;
 
-// Initialize the Wayland application
 int locus_init(Locus *app, int width, int height);
 
-// Create a regular window
 void locus_create_window(Locus *app, const char *title);
 
-// Create a layer shell surface
 void locus_create_layer_surface(Locus *app, uint32_t layer, uint32_t anchor);
 
-// Set the draw callback function
 void locus_set_draw_callback(Locus *app,
         void (*draw_callback)(cairo_t *cr, int width,
             int height));
@@ -64,10 +60,10 @@ void locus_set_partial_draw_callback(Locus *app,
 
 void locus_req_partial_redraw(Locus *app, int x, int y, int width, int height);
 
-// Run the main loop
+void locus_layer_surface_new_size(Locus *app, int new_width, int new_height);
+
 void locus_run(Locus *app);
 
-// Clean up resources
 void locus_cleanup(Locus *app);
 
 #endif // LOCUS_H
