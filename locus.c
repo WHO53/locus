@@ -466,6 +466,72 @@ void locus_run(Locus *app) {
     }
 }
 
+void locus_run_multi(Locus **apps, int num_apps) {
+   int all_configured;
+   do {
+       all_configured = 1;
+       for (int i = 0; i < num_apps; i++) {
+            if (!apps[i]->configured) {
+                all_configured = 0;
+                wl_display_dispatch(apps[i]->display);
+            }
+       }
+   } while (!all_configured);
+
+   for (int i = 0; i < num_apps; i++) {
+    apps[i]->redraw = 1;
+   }
+
+   int all_running;
+   do {
+    all_running = 0;
+
+    for (int i = 0; i < num_apps; i++) {
+        Locus *app = apps[i];
+        if (!app->running) continue;
+
+        all_running = 1;
+
+        if (wl_display_prepare_read(app->display) != 0) {
+            wl_display_dispatch_pending(app->display);
+        } else {
+            wl_display_flush(app->display);
+            struct timespec ts = {0, 350000000};
+            nanosleep(&ts, NULL);
+        }
+
+        if (app->redraw) {
+            app->draw_callback(app->cr_back, app->width, app->height);
+            cairo_surface_flush(app->cairo_surface_back);
+            wl_surface_attach(app->surface, app->buffer_back, 0, 0);
+            wl_surface_damage(app->surface, 0, 0, app->width, app->height);
+            wl_surface_commit(app->surface);
+            app->redraw = 0;
+        } else if (app->redraw_partial) {
+            cairo_save(app->cr_back);
+            cairo_set_operator(app->cr_back, CAIRO_OPERATOR_CLEAR);
+            cairo_rectangle(app->cr_back, app->redraw_x, app->redraw_y, app->redraw_width, app->redraw_height);
+            cairo_fill(app->cr_back);
+            cairo_restore(app->cr_back);
+    
+            app->partial_draw_callback(app->cr_back, app->redraw_x, app->redraw_y, app->redraw_width, app->redraw_height);
+            cairo_surface_flush(app->cairo_surface_back);
+            wl_surface_attach(app->surface, app->buffer_back, 0, 0);
+            wl_surface_damage(app->surface, app->redraw_x, app->redraw_y, app->redraw_width, app->redraw_height);
+            wl_surface_commit(app->surface);
+            app->redraw_partial = 0;
+        }
+    }
+    for (int i = 0; i < num_apps; i++) {
+        if (apps[i]->running) {
+            wl_display_read_events(apps[i]->display);
+            wl_display_dispatch_pending(apps[i]->display);
+        }
+    }
+   } while (all_running);
+}
+
+
 void locus_cleanup(Locus *app) {
     if (app->cr) {
         cairo_destroy(app->cr);

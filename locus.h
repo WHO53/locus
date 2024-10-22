@@ -65,6 +65,8 @@ void locus_layer_surface_new_size(Locus *app, int new_width, int new_height);
 
 void locus_run(Locus *app);
 
+void locus_run_multi(Locus **apps, int num_apps);
+
 void locus_cleanup(Locus *app);
 
 #endif // LOCUS_H
