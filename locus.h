@@ -35,6 +35,7 @@ typedef struct {
     int redraw;
     int redraw_partial;
     int redraw_x, redraw_y, redraw_width, redraw_height;
+    int state;
     void (*draw_callback)(cairo_t *cr, int width, int height);
     void (*touch_callback)(int32_t id, double x, double y, int32_t state);
     void (*partial_draw_callback)(cairo_t *cr, int x, int y, int width, int height);
