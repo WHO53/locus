@@ -26,7 +26,7 @@ OBJECTS = $(SOURCES:.c=.o)
 all: ${LIBRARY}
 
 proto/%-client-protocol.c: proto/%.xml
-	wayland-scanner code < $? > $@
+	wayland-scanner private-code < $? > $@
 
 proto/%-client-protocol.h: proto/%.xml
 	wayland-scanner client-header < $? > $@
