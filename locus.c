@@ -7,6 +7,7 @@
 #include <sys/mman.h>
 #include <time.h>
 #include <unistd.h>
+#include <wayland-client-protocol.h>
 
 static void handle_ping(void *data, struct xdg_wm_base *xdg_wm_base,
         uint32_t serial) {
@@ -390,6 +391,12 @@ void locus_create_layer_surface(Locus *app, uint32_t layer, uint32_t anchor) {
     zwlr_layer_surface_v1_add_listener(app->layer_surface,
             &layer_surface_listener, app);
     wl_surface_commit(app->surface);
+}
+
+void locus_destroy_layer_surface(Locus *app) {
+    zwlr_layer_surface_v1_destroy(app->layer_surface);
+    wl_surface_destroy(app->surface);
+    app->layer_surface = NULL;
 }
 
 void locus_layer_surface_new_size(Locus *app, int new_width, int new_height) {

@@ -47,6 +47,8 @@ void locus_create_window(Locus *app, const char *title);
 
 void locus_create_layer_surface(Locus *app, uint32_t layer, uint32_t anchor);
 
+void locus_destroy_layer_surface(Locus *app);
+
 void locus_set_draw_callback(Locus *app,
         void (*draw_callback)(cairo_t *cr, int width,
             int height));
