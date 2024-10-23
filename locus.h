@@ -45,7 +45,7 @@ int locus_init(Locus *app, int width, int height);
 
 void locus_create_window(Locus *app, const char *title);
 
-void locus_create_layer_surface(Locus *app, uint32_t layer, uint32_t anchor);
+void locus_create_layer_surface(Locus *app, uint32_t layer, uint32_t anchor, int exclusive);
 
 void locus_destroy_layer_surface(Locus *app);
 

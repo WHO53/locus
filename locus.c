@@ -1,4 +1,5 @@
 #include "locus.h"
+#include "proto/wlr-layer-shell-unstable-v1-client-protocol.h"
 #include <cairo/cairo.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -382,12 +383,15 @@ void locus_create_window(Locus *app, const char *title) {
     wl_surface_commit(app->surface);
 }
 
-void locus_create_layer_surface(Locus *app, uint32_t layer, uint32_t anchor) {
+void locus_create_layer_surface(Locus *app, uint32_t layer, uint32_t anchor, int exclusive) {
     app->surface = wl_compositor_create_surface(app->compositor);
     app->layer_surface = zwlr_layer_shell_v1_get_layer_surface(
             app->layer_shell, app->surface, NULL, layer, "locus-layer");
     zwlr_layer_surface_v1_set_size(app->layer_surface, app->width, app->height);
     zwlr_layer_surface_v1_set_anchor(app->layer_surface, anchor);
+    if (exclusive) {
+        zwlr_layer_surface_v1_set_exclusive_zone(app->layer_surface, app->height);
+    }
     zwlr_layer_surface_v1_add_listener(app->layer_surface,
             &layer_surface_listener, app);
     wl_surface_commit(app->surface);
