@@ -393,6 +393,12 @@ void locus_run(Locus *app) {
             nanosleep(&ts, NULL);
         }
         if (app->redraw) {
+            cairo_save(app->cr_back);
+            cairo_set_operator(app->cr_back, CAIRO_OPERATOR_CLEAR);
+            cairo_rectangle(app->cr_back, 0, 0, app->width, app->height);
+            cairo_fill(app->cr_back);
+            cairo_restore(app->cr_back);
+
             app->draw_callback(app->cr_back, app->width, app->height);
             cairo_surface_flush(app->cairo_surface_back);
             wl_surface_attach(app->surface, app->buffer_back, 0, 0);
@@ -453,6 +459,12 @@ void locus_run_multi(Locus **apps, int num_apps) {
         }
 
         if (app->redraw) {
+            cairo_save(app->cr_back);
+            cairo_set_operator(app->cr_back, CAIRO_OPERATOR_CLEAR);
+            cairo_rectangle(app->cr_back, 0, 0, app->width, app->height);
+            cairo_fill(app->cr_back);
+            cairo_restore(app->cr_back);
+
             app->draw_callback(app->cr_back, app->width, app->height);
             cairo_surface_flush(app->cairo_surface_back);
             wl_surface_attach(app->surface, app->buffer_back, 0, 0);
