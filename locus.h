@@ -36,6 +36,7 @@ typedef struct {
     int redraw_partial;
     int redraw_x, redraw_y, redraw_width, redraw_height;
     int state;
+    char *title;
     void (*draw_callback)(cairo_t *cr, int width, int height);
     void (*touch_callback)(int32_t id, double x, double y, int32_t state);
     void (*partial_draw_callback)(cairo_t *cr, int x, int y, int width, int height);
@@ -45,7 +46,7 @@ int locus_init(Locus *app, int width, int height);
 
 void locus_create_window(Locus *app, const char *title);
 
-void locus_create_layer_surface(Locus *app, uint32_t layer, uint32_t anchor, int exclusive);
+void locus_create_layer_surface(Locus *app, const char *title, uint32_t layer, uint32_t anchor, int exclusive);
 
 void locus_destroy_layer_surface(Locus *app);
 
