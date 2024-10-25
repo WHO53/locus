@@ -4,6 +4,7 @@
 #include "proto/wlr-layer-shell-unstable-v1-client-protocol.h"
 #include "proto/xdg-shell-client-protocol.h"
 #include <cairo/cairo.h>
+#include <stdint.h>
 #include <wayland-client.h>
 
 typedef struct {
@@ -64,7 +65,7 @@ void locus_set_partial_draw_callback(Locus *app,
 
 void locus_req_partial_redraw(Locus *app, int x, int y, int width, int height);
 
-void locus_layer_surface_new_size(Locus *app, int new_width, int new_height);
+void locus_layer_surface_reconfigure(Locus *app, int new_width, int new_height, uint32_t new_anchor);
 
 void locus_run(Locus *app);
 

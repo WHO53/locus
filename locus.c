@@ -2,6 +2,7 @@
 #include "proto/wlr-layer-shell-unstable-v1-client-protocol.h"
 #include <cairo/cairo.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -405,11 +406,12 @@ void locus_destroy_layer_surface(Locus *app) {
     app->layer_surface = NULL;
 }
 
-void locus_layer_surface_new_size(Locus *app, int new_width, int new_height) {
+void locus_layer_surface_reconfigure(Locus *app, int new_width, int new_height, uint32_t new_anchor) {
     if (app->layer_surface) {
         app->width = (app->screen_width * new_width) / 100;
         app->height = (app->screen_height * new_height) / 100;
         zwlr_layer_surface_v1_set_size(app->layer_surface, app->width, app->height);
+        zwlr_layer_surface_v1_set_anchor(app->layer_surface, new_anchor);
         create_buffer(app);
     }
 }
