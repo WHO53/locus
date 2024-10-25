@@ -218,121 +218,58 @@ static void create_buffer(Locus *app) {
     int size = stride * app->height;
 
     char filename[] = "/tmp/wayland-shm-XXXXXX";
-    char filename_back[] = "/tmp/wayland-shm-back-XXXXXX";
-    
-    int fd_front = mkstemp(filename);
-    if (fd_front < 0) {
-        fprintf(stderr, "Failed to create temp file for front buffer\n");
+    int fd = mkstemp(filename);
+    if (fd < 0) {
+        perror("Failed to create temp file");
         exit(1);
     }
     unlink(filename);
 
-    if (ftruncate(fd_front, size) == -1) {
-        fprintf(stderr, "Failed to set size for front buffer temp file\n");
-        close(fd_front);
+    if (ftruncate(fd, size * 2) == -1) {
+        perror("Failed to set size for buffer temp file");
+        close(fd);
         exit(1);
     }
 
-    app->shm_data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd_front, 0);
+    app->shm_data = mmap(NULL, size * 2, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if (app->shm_data == MAP_FAILED) {
-        fprintf(stderr, "mmap failed for front buffer\n");
-        close(fd_front);
+        perror("mmap failed for buffers");
+        close(fd);
         exit(1);
     }
 
-    struct wl_shm_pool *pool_front = wl_shm_create_pool(app->shm, fd_front, size);
-    if (!pool_front) {
-        fprintf(stderr, "Failed to create Wayland shared memory pool for front buffer\n");
-        munmap(app->shm_data, size);
-        close(fd_front);
+    struct wl_shm_pool *pool = wl_shm_create_pool(app->shm, fd, size * 2);
+    if (!pool) {
+        perror("Failed to create Wayland shared memory pool");
+        munmap(app->shm_data, size * 2);
+        close(fd);
         exit(1);
     }
 
-    app->buffer = wl_shm_pool_create_buffer(pool_front, 0, app->width, app->height,
-            stride, WL_SHM_FORMAT_ARGB8888);
-    if (!app->buffer) {
-        fprintf(stderr, "Failed to create Wayland buffer for front buffer\n");
-        wl_shm_pool_destroy(pool_front);
-        munmap(app->shm_data, size);
-        close(fd_front);
+    app->buffer = wl_shm_pool_create_buffer(pool, 0, app->width, app->height, stride, WL_SHM_FORMAT_ARGB8888);
+    app->buffer_back = wl_shm_pool_create_buffer(pool, size, app->width, app->height, stride, WL_SHM_FORMAT_ARGB8888);
+    
+    if (!app->buffer || !app->buffer_back) {
+        perror("Failed to create Wayland buffers");
+        wl_shm_pool_destroy(pool);
+        munmap(app->shm_data, size * 2);
+        close(fd);
         exit(1);
     }
 
-    wl_shm_pool_destroy(pool_front);
-    close(fd_front);
+    wl_shm_pool_destroy(pool);
+    close(fd);
 
-    int fd_back = mkstemp(filename_back);
-    if (fd_back < 0) {
-        fprintf(stderr, "Failed to create temp file for back buffer\n");
-        exit(1);
-    }
-    unlink(filename_back);
+    app->cairo_surface = cairo_image_surface_create_for_data(app->shm_data, CAIRO_FORMAT_ARGB32, app->width, app->height, stride);
+    app->cairo_surface_back = cairo_image_surface_create_for_data(app->shm_data + size, CAIRO_FORMAT_ARGB32, app->width, app->height, stride);
 
-    if (ftruncate(fd_back, size) == -1) {
-        fprintf(stderr, "Failed to set size for back buffer temp file\n");
-        close(fd_back);
-        exit(1);
-    }
-
-    app->shm_data_back = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd_back, 0);
-    if (app->shm_data_back == MAP_FAILED) {
-        fprintf(stderr, "mmap failed for back buffer\n");
-        close(fd_back);
-        exit(1);
-    }
-
-    struct wl_shm_pool *pool_back = wl_shm_create_pool(app->shm, fd_back, size);
-    if (!pool_back) {
-        fprintf(stderr, "Failed to create Wayland shared memory pool for back buffer\n");
-        munmap(app->shm_data_back, size);
-        close(fd_back);
-        exit(1);
-    }
-
-    app->buffer_back = wl_shm_pool_create_buffer(pool_back, 0, app->width, app->height,
-            stride, WL_SHM_FORMAT_ARGB8888);
-    if (!app->buffer_back) {
-        fprintf(stderr, "Failed to create Wayland buffer for back buffer\n");
-        wl_shm_pool_destroy(pool_back);
-        munmap(app->shm_data_back, size);
-        close(fd_back);
-        exit(1);
-    }
-
-    wl_shm_pool_destroy(pool_back);
-    close(fd_back);
-
-    app->cairo_surface = cairo_image_surface_create_for_data(
-            app->shm_data, CAIRO_FORMAT_ARGB32, app->width, app->height, stride);
-    if (!app->cairo_surface) {
-        fprintf(stderr, "Failed to create Cairo surface for front buffer\n");
-        exit(1);
-    }
-
-    app->cairo_surface_back = cairo_image_surface_create_for_data(
-            app->shm_data_back, CAIRO_FORMAT_ARGB32, app->width, app->height, stride);
-    if (!app->cairo_surface_back) {
-        fprintf(stderr, "Failed to create Cairo surface for back buffer\n");
-        cairo_surface_destroy(app->cairo_surface);
+    if (!app->cairo_surface || !app->cairo_surface_back) {
+        perror("Failed to create Cairo surfaces");
         exit(1);
     }
 
     app->cr = cairo_create(app->cairo_surface);
-    if (!app->cr) {
-        fprintf(stderr, "Failed to create Cairo context for front buffer\n");
-        cairo_surface_destroy(app->cairo_surface);
-        cairo_surface_destroy(app->cairo_surface_back);
-        exit(1);
-    }
-
     app->cr_back = cairo_create(app->cairo_surface_back);
-    if (!app->cr_back) {
-        fprintf(stderr, "Failed to create Cairo context for back buffer\n");
-        cairo_destroy(app->cr);
-        cairo_surface_destroy(app->cairo_surface);
-        cairo_surface_destroy(app->cairo_surface_back);
-        exit(1);
-    }
 }
 
 int locus_init(Locus *app, int width_percent, int height_percent) {
