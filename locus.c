@@ -28,11 +28,7 @@ static void handle_configure(void *data, struct xdg_surface *xdg_surface,
     xdg_surface_ack_configure(xdg_surface, serial);
     app->configured = 1;
     if (app->buffer) {
-        app->draw_callback(app->cr, app->width, app->height);
-        cairo_surface_flush(app->cairo_surface);
-        wl_surface_attach(app->surface, app->buffer, 0, 0);
-        wl_surface_damage(app->surface, 0, 0, app->width, app->height);
-        wl_surface_commit(app->surface);
+        app->redraw = 1;
     }
 }
 
@@ -155,11 +151,7 @@ static void handle_layer_surface_configure(
     zwlr_layer_surface_v1_ack_configure(layer_surface, serial);
     app->configured = 1;
     if (app->buffer) {
-        app->draw_callback(app->cr, app->width, app->height);
-        cairo_surface_flush(app->cairo_surface);
-        wl_surface_attach(app->surface, app->buffer, 0, 0);
-        wl_surface_damage(app->surface, 0, 0, app->width, app->height);
-        wl_surface_commit(app->surface);
+        app->redraw = 1;
     }
 }
 
