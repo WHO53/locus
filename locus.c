@@ -381,7 +381,7 @@ void locus_run(Locus *app) {
             wl_display_dispatch_pending(app->display);
         } else {
             wl_display_flush(app->display);
-            struct timespec ts = {0, 350000000};
+            struct timespec ts = {0, 16667000};
             nanosleep(&ts, NULL);
         }
         if (app->redraw) {
@@ -446,7 +446,7 @@ void locus_run_multi(Locus **apps, int num_apps) {
             wl_display_dispatch_pending(app->display);
         } else {
             wl_display_flush(app->display);
-            struct timespec ts = {0, 350000000};
+            struct timespec ts = {0, 16667000};
             nanosleep(&ts, NULL);
         }
 
