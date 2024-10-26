@@ -65,7 +65,7 @@ void locus_set_partial_draw_callback(Locus *app,
 
 void locus_req_partial_redraw(Locus *app, int x, int y, int width, int height);
 
-void locus_layer_surface_reconfigure(Locus *app, int new_width, int new_height, uint32_t new_anchor);
+void locus_layer_surface_reconfigure(Locus *app, int new_width, int new_height, uint32_t new_anchor, int new_exclusive_state);
 
 void locus_run(Locus *app);
 
