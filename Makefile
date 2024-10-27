@@ -6,7 +6,7 @@ INCDIR = $(PREFIX)/include/$(NAME)
 LIBDIR = $(PREFIX)/lib
 PCDIR = $(LIBDIR)/pkgconfig
 
-PKGS = wayland-client cairo wayland-protocols
+PKGS = wayland-client cairo wayland-protocols librsvg-2.0
 
 LOCUS_SOURCES += $(wildcard $(SRC)/*.c)
 LOCUS_HEADERS += $(wildcard $(SRC)/*.h)
