@@ -49,6 +49,8 @@ void locus_create_window(Locus *app, const char *title);
 
 void locus_create_layer_surface(Locus *app, const char *title, uint32_t layer, uint32_t anchor, int exclusive);
 
+void locus_create_layer_surface_with_margin(Locus *app, const char *title , uint32_t layer, uint32_t anchor, int exclusive, double left, double right, double top, double bottom);
+
 void locus_destroy_layer_surface(Locus *app);
 
 void locus_set_draw_callback(Locus *app,

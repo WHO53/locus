@@ -329,6 +329,22 @@ void locus_create_layer_surface(Locus *app, const char *title , uint32_t layer, 
     wl_surface_commit(app->surface);
 }
 
+void locus_create_layer_surface_with_margin(Locus *app, const char *title , uint32_t layer, uint32_t anchor, int exclusive, double left, double right, double top, double bottom) {
+    app->surface = wl_compositor_create_surface(app->compositor);
+    app->layer_surface = zwlr_layer_shell_v1_get_layer_surface(
+            app->layer_shell, app->surface, NULL, layer, "title");
+    app->title = strdup(title);
+    zwlr_layer_surface_v1_set_size(app->layer_surface, app->width, app->height);
+    zwlr_layer_surface_v1_set_anchor(app->layer_surface, anchor);
+    zwlr_layer_surface_v1_set_margin(app->layer_surface, top, right, bottom, left);
+    if (exclusive) {
+        zwlr_layer_surface_v1_set_exclusive_zone(app->layer_surface, app->height);
+    }
+    zwlr_layer_surface_v1_add_listener(app->layer_surface,
+            &layer_surface_listener, app);
+    wl_surface_commit(app->surface);
+}
+
 void locus_destroy_layer_surface(Locus *app) {
     zwlr_layer_surface_v1_destroy(app->layer_surface);
     wl_surface_destroy(app->surface);
