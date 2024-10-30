@@ -12,6 +12,8 @@ enum RoundedCorner {
 
 typedef enum { BOLD, NORMAL } FontWeight;
 
+void locus_color(cairo_t *cr, double red, double blue, double green, double alpha);
+
 void locus_rectangle(cairo_t *cr, double x, double y, double width, double height, double radius, unsigned int corner_flags);
 
 void locus_icon(cairo_t *cr, double x, double y, const char *icon_name, double width, double height);

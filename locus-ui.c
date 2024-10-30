@@ -5,6 +5,13 @@
 #include <librsvg/rsvg.h>
 #include "locus-ui.h"
 
+void locus_color(cairo_t *cr, double red, double green, double blue, double alpha) {
+    red = red / 255.0;
+    blue = blue / 255.0;
+    green = green / 255.0;
+    cairo_set_source_rgba(cr, red, green, blue, alpha);
+}
+
 void locus_rectangle(cairo_t *cr, double center_x, double center_y, double width, double height, double radius, unsigned int corner_flags) {
     double x = center_x - width / 2.0;
     double y = center_y - height / 2.0;
@@ -69,8 +76,6 @@ char *locus_find_icon(const char *icon_name) {
             if (locus_file_exists(path)) return path;
         } else {
             snprintf(path, sizeof(path), "%s%s.svg", icon_dirs[i], icon_name);
-            if (locus_file_exists(path)) return path;
-            snprintf(path, sizeof(path), "%s%s-symbolic.svg", icon_dirs[i], icon_name);
             if (locus_file_exists(path)) return path;
         }
     }
