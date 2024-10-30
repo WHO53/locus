@@ -41,6 +41,7 @@ static void handle_xdg_toplevel_configure(void *data,
 static void handle_xdg_toplevel_close(void *data,
         struct xdg_toplevel *xdg_toplevel) {
     Locus *app = data;
+    app->xdg_toplevel = NULL;
     app->running = 0;
 }
 
@@ -159,6 +160,7 @@ static void
 handle_layer_surface_closed(void *data,
         struct zwlr_layer_surface_v1 *layer_surface) {
     Locus *app = data;
+    app->layer_surface = NULL;
     app->running = 0;
 }
 
@@ -574,7 +576,6 @@ void locus_cleanup(Locus *app) {
     if (app->touch) {
         wl_touch_destroy(app->touch);
     }
-    
     if (app->display) {
         wl_display_disconnect(app->display);
     }
