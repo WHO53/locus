@@ -42,6 +42,11 @@ static void handle_xdg_toplevel_close(void *data,
         struct xdg_toplevel *xdg_toplevel) {
     Locus *app = data;
     app->xdg_toplevel = NULL;
+    if (app->surface) {
+        wl_surface_attach(app->surface, NULL, 0, 0);
+        wl_surface_commit(app->surface);
+        wl_display_flush(app->display);
+    }
     app->running = 0;
 }
 
@@ -161,6 +166,11 @@ handle_layer_surface_closed(void *data,
         struct zwlr_layer_surface_v1 *layer_surface) {
     Locus *app = data;
     app->layer_surface = NULL;
+    if (app->surface) {
+        wl_surface_attach(app->surface, NULL, 0, 0);
+        wl_surface_commit(app->surface);
+        wl_display_flush(app->display);
+    }
     app->running = 0;
 }
 
