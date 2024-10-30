@@ -522,71 +522,94 @@ void locus_run_multi(Locus **apps, int num_apps) {
 void locus_cleanup(Locus *app) {
     if (app->cr) {
         cairo_destroy(app->cr);
+        app->cr = NULL;
     }
     if (app->cr_back) {
         cairo_destroy(app->cr_back);
+        app->cr_back = NULL;
     }
     if (app->cairo_surface) {
         cairo_surface_destroy(app->cairo_surface);
+        app->cairo_surface = NULL;
         if (app->shm_data) {
             munmap(app->shm_data, app->width * app->height * 4);
+            app->shm_data = NULL;
         }
     }
     if (app->cairo_surface_back) {
         cairo_surface_destroy(app->cairo_surface_back);
+        app->cairo_surface_back = NULL;
         if (app->shm_data_back) {
             munmap(app->shm_data_back, app->width * app->height * 4);
+            app->shm_data_back = NULL;
         }
     }
     if (app->buffer) {
         wl_buffer_destroy(app->buffer);
+        app->buffer = NULL;
     }
     if (app->buffer_back) {
         wl_buffer_destroy(app->buffer_back);
+        app->buffer_back = NULL;
     }
     if (app->xdg_toplevel) {
         xdg_toplevel_destroy(app->xdg_toplevel);
+        app->xdg_toplevel = NULL;
     }
     if (app->xdg_surface) {
         xdg_surface_destroy(app->xdg_surface);
+        app->xdg_surface = NULL;
     }
     if (app->layer_surface) {
         zwlr_layer_surface_v1_destroy(app->layer_surface);
+        app->layer_surface = NULL;
     }
     if (app->output) {
         wl_output_destroy(app->output);
+        app->output = NULL;
     }
     if (app->xdg_toplevel) {
         xdg_toplevel_destroy(app->xdg_toplevel);
+        app->xdg_toplevel = NULL;
     }
     if (app->xdg_surface) {
         xdg_surface_destroy(app->xdg_surface);
+        app->xdg_surface = NULL;
     }
     if (app->layer_surface) {
         zwlr_layer_surface_v1_destroy(app->layer_surface);
+        app->layer_surface = NULL;
     }
     if (app->output) {
         wl_output_destroy(app->output);
+        app->output = NULL;
     }
     if (app->surface) {
         wl_surface_destroy(app->surface);
+        app->surface = NULL;
     }
     if (app->xdg_wm_base) {
         xdg_wm_base_destroy(app->xdg_wm_base);
+        app->xdg_wm_base = NULL;
     }
     if (app->compositor) {
         wl_compositor_destroy(app->compositor);
+        app->compositor = NULL;
     }
     if (app->registry) {
         wl_registry_destroy(app->registry);
+        app->registry = NULL;
     }
     if (app->seat) {
         wl_seat_destroy(app->seat);
+        app->seat = NULL;
     }
     if (app->touch) {
         wl_touch_destroy(app->touch);
+        app->touch = NULL;
     }
     if (app->display) {
         wl_display_disconnect(app->display);
+        app->display = NULL;
     }
 }
