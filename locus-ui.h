@@ -18,6 +18,6 @@ void locus_rectangle(cairo_t *cr, double x, double y, double width, double heigh
 
 void locus_icon(cairo_t *cr, double x, double y, const char *icon_name, double width, double height);
 
-void locus_text(cairo_t *cr, const char *text, double x, double y, double width, double height, FontWeight font_weight);
+void locus_text(cairo_t *cr, const char *text, double x, double y, double size, FontWeight font_weight);
 
 #endif // LOCUS_UI_H

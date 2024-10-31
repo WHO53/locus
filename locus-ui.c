@@ -122,12 +122,12 @@ void locus_icon(cairo_t *cr, double center_x, double center_y, const char *icon_
     }
 }
 
-void locus_text(cairo_t *cr, const char *text, double center_x, double center_y, double width, double height, FontWeight font_weight){
+void locus_text(cairo_t *cr, const char *text, double center_x, double center_y, double size, FontWeight font_weight){
     cairo_font_weight_t weight;
     weight = (font_weight == BOLD) ? CAIRO_FONT_WEIGHT_BOLD : CAIRO_FONT_WEIGHT_NORMAL;
-    cairo_select_font_face(cr, "Monofur Nerd Font", 
+    cairo_select_font_face(cr, "Poppins Thin", 
             CAIRO_FONT_SLANT_NORMAL, weight);
-    cairo_set_font_size(cr, height);
+    cairo_set_font_size(cr, size);
     
     cairo_text_extents_t extents;
     cairo_text_extents(cr, text, &extents);
