@@ -1,18 +1,18 @@
 #include "locus.h"
 #include "proto/wlr-layer-shell-unstable-v1-client-protocol.h"
-#include <cairo/cairo.h>
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <GLES2/gl2.h>
 #include <fcntl.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/mman.h>
 #include <time.h>
 #include <unistd.h>
 #include <wayland-client-protocol.h>
+#include <wayland-egl.h>
 
-static void handle_ping(void *data, struct xdg_wm_base *xdg_wm_base,
-        uint32_t serial) {
+static void handle_ping(void *data, struct xdg_wm_base *xdg_wm_base, uint32_t serial) {
     xdg_wm_base_pong(xdg_wm_base, serial);
 }
 
@@ -20,33 +20,27 @@ static const struct xdg_wm_base_listener xdg_wm_base_listener = {
     .ping = handle_ping,
 };
 
-static void create_buffer(Locus *app);
-
-static void handle_configure(void *data, struct xdg_surface *xdg_surface,
-        uint32_t serial) {
+static void handle_configure(void *data, struct xdg_surface *xdg_surface, uint32_t serial) {
     Locus *app = data;
     xdg_surface_ack_configure(xdg_surface, serial);
     app->configured = 1;
-    if (app->buffer) {
+    if (app->egl_surface) {
         app->redraw = 1;
     }
 }
 
-static void handle_xdg_toplevel_configure(void *data,
-        struct xdg_toplevel *xdg_toplevel,
-        int32_t width, int32_t height,
-        struct wl_array *states) {
+static void handle_xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel,
+        int32_t width, int32_t height, struct wl_array *states) {
+    Locus *app = data;
+    if (width > 0 && height > 0) {
+        if (app->egl_window) {
+            app->redraw = 1;
+        }
+    }
 }
 
-static void handle_xdg_toplevel_close(void *data,
-        struct xdg_toplevel *xdg_toplevel) {
+static void handle_xdg_toplevel_close(void *data, struct xdg_toplevel *xdg_toplevel) {
     Locus *app = data;
-    app->xdg_toplevel = NULL;
-    if (app->surface) {
-        wl_surface_attach(app->surface, NULL, 0, 0);
-        wl_surface_commit(app->surface);
-        wl_display_flush(app->display);
-    }
     app->running = 0;
 }
 
@@ -141,6 +135,32 @@ static const struct wl_seat_listener seat_listener = {
     .name = handle_seat_name,
 };
 
+static void handle_layer_surface_configure(void *data, 
+        struct zwlr_layer_surface_v1 *layer_surface,
+        uint32_t serial, uint32_t width, uint32_t height) {
+    Locus *app = data;
+    zwlr_layer_surface_v1_ack_configure(layer_surface, serial);
+    
+    if (width > 0 && height > 0) {
+        if (app->egl_window) {
+            app->redraw = 1;
+        }
+    }
+    
+    app->configured = 1;
+}
+
+static void handle_layer_surface_closed(void *data,
+        struct zwlr_layer_surface_v1 *layer_surface) {
+    Locus *app = data;
+    app->running = 0;
+}
+
+static const struct zwlr_layer_surface_v1_listener layer_surface_listener = {
+    .configure = handle_layer_surface_configure,
+    .closed = handle_layer_surface_closed,
+};
+
 static const struct xdg_toplevel_listener xdg_toplevel_listener = {
     .configure = handle_xdg_toplevel_configure,
     .close = handle_xdg_toplevel_close,
@@ -150,65 +170,66 @@ static const struct xdg_surface_listener xdg_surface_listener = {
     .configure = handle_configure,
 };
 
-static void handle_layer_surface_configure(
-        void *data, struct zwlr_layer_surface_v1 *layer_surface, uint32_t serial,
-        uint32_t width, uint32_t height) {
-    Locus *app = data;
-    zwlr_layer_surface_v1_ack_configure(layer_surface, serial);
-    app->configured = 1;
-    if (app->buffer) {
-        app->redraw = 1;
-    }
-}
+static void init_egl(Locus *app) {
+    EGLint major, minor, count, n;
+    EGLConfig *configs;
+    EGLint config_attribs[] = {
+        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+        EGL_RED_SIZE, 8,
+        EGL_GREEN_SIZE, 8,
+        EGL_BLUE_SIZE, 8,
+        EGL_ALPHA_SIZE, 8,
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+        EGL_NONE
+    };
 
-static void
-handle_layer_surface_closed(void *data,
-        struct zwlr_layer_surface_v1 *layer_surface) {
-    Locus *app = data;
-    app->layer_surface = NULL;
-    if (app->surface) {
-        wl_surface_attach(app->surface, NULL, 0, 0);
-        wl_surface_commit(app->surface);
-        wl_display_flush(app->display);
-    }
-    app->running = 0;
-}
+    static const EGLint context_attribs[] = {
+        EGL_CONTEXT_CLIENT_VERSION, 2,
+        EGL_NONE
+    };
 
-static const struct zwlr_layer_surface_v1_listener layer_surface_listener = {
-    .configure = handle_layer_surface_configure,
-    .closed = handle_layer_surface_closed,
-};
+    PFNEGLGETPLATFORMDISPLAYEXTPROC get_platform_display = 
+        (PFNEGLGETPLATFORMDISPLAYEXTPROC)eglGetProcAddress("eglGetPlatformDisplayEXT");
+    
+    if (get_platform_display) {
+        app->egl_display = get_platform_display(EGL_PLATFORM_WAYLAND_EXT, app->display, NULL);
+    } else {
+        app->egl_display = eglGetDisplay((EGLNativeDisplayType)app->display);
+    }
+
+    eglInitialize(app->egl_display, &major, &minor);
+    eglGetConfigs(app->egl_display, NULL, 0, &count);
+    configs = calloc(count, sizeof *configs);
+    
+    eglChooseConfig(app->egl_display, config_attribs, configs, count, &n);
+    app->egl_config = configs[0];
+
+    app->egl_context = eglCreateContext(app->egl_display, app->egl_config, 
+                                      EGL_NO_CONTEXT, context_attribs);
+    free(configs);
+}
 
 static void registry_global(void *data, struct wl_registry *registry,
-        uint32_t name, const char *interface,
-        uint32_t version) {
+        uint32_t name, const char *interface, uint32_t version) {
     Locus *app = data;
 
     if (strcmp(interface, wl_compositor_interface.name) == 0) {
-        app->compositor =
-            wl_registry_bind(registry, name, &wl_compositor_interface, 1);
+        app->compositor = wl_registry_bind(registry, name, &wl_compositor_interface, 1);
     } else if (strcmp(interface, wl_output_interface.name) == 0) {
-        app->output=
-            wl_registry_bind(registry, name, &wl_output_interface, 2);
+        app->output= wl_registry_bind(registry, name, &wl_output_interface, 2);
         wl_output_add_listener(app->output, &output_listener, app);
     } else if (strcmp(interface, xdg_wm_base_interface.name) == 0) {
-        app->xdg_wm_base =
-            wl_registry_bind(registry, name, &xdg_wm_base_interface, 1);
+        app->xdg_wm_base = wl_registry_bind(registry, name, &xdg_wm_base_interface, 1);
         xdg_wm_base_add_listener(app->xdg_wm_base, &xdg_wm_base_listener, app);
-    } else if (strcmp(interface, wl_shm_interface.name) == 0) {
-        app->shm = wl_registry_bind(registry, name, &wl_shm_interface, 1);
     } else if (strcmp(interface, zwlr_layer_shell_v1_interface.name) == 0) {
-        app->layer_shell =
-            wl_registry_bind(registry, name, &zwlr_layer_shell_v1_interface, 1);
+        app->layer_shell = wl_registry_bind(registry, name, &zwlr_layer_shell_v1_interface, 1);
     } else if (strcmp(interface, wl_seat_interface.name) == 0) {
-        app->seat =
-            wl_registry_bind(registry, name, &wl_seat_interface, 7);
+        app->seat = wl_registry_bind(registry, name, &wl_seat_interface, 7);
         wl_seat_add_listener(app->seat, &seat_listener, app);
     }
 }
 
-static void registry_global_remove(void *data, struct wl_registry *registry,
-        uint32_t name) {
+static void registry_global_remove(void *data, struct wl_registry *registry, uint32_t name) {
     // This space intentionally left blank
 }
 
@@ -216,65 +237,6 @@ static const struct wl_registry_listener registry_listener = {
     .global = registry_global,
     .global_remove = registry_global_remove,
 };
-
-static void create_buffer(Locus *app) {
-    int stride = app->width * 4;
-    int size = stride * app->height;
-
-    char filename[] = "/tmp/wayland-shm-XXXXXX";
-    int fd = mkstemp(filename);
-    if (fd < 0) {
-        perror("Failed to create temp file");
-        exit(1);
-    }
-    unlink(filename);
-
-    if (ftruncate(fd, size * 2) == -1) {
-        perror("Failed to set size for buffer temp file");
-        close(fd);
-        exit(1);
-    }
-
-    app->shm_data = mmap(NULL, size * 2, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if (app->shm_data == MAP_FAILED) {
-        perror("mmap failed for buffers");
-        close(fd);
-        exit(1);
-    }
-
-    struct wl_shm_pool *pool = wl_shm_create_pool(app->shm, fd, size * 2);
-    if (!pool) {
-        perror("Failed to create Wayland shared memory pool");
-        munmap(app->shm_data, size * 2);
-        close(fd);
-        exit(1);
-    }
-
-    app->buffer = wl_shm_pool_create_buffer(pool, 0, app->width, app->height, stride, WL_SHM_FORMAT_ARGB8888);
-    app->buffer_back = wl_shm_pool_create_buffer(pool, size, app->width, app->height, stride, WL_SHM_FORMAT_ARGB8888);
-    
-    if (!app->buffer || !app->buffer_back) {
-        perror("Failed to create Wayland buffers");
-        wl_shm_pool_destroy(pool);
-        munmap(app->shm_data, size * 2);
-        close(fd);
-        exit(1);
-    }
-
-    wl_shm_pool_destroy(pool);
-    close(fd);
-
-    app->cairo_surface = cairo_image_surface_create_for_data(app->shm_data, CAIRO_FORMAT_ARGB32, app->width, app->height, stride);
-    app->cairo_surface_back = cairo_image_surface_create_for_data(app->shm_data + size, CAIRO_FORMAT_ARGB32, app->width, app->height, stride);
-
-    if (!app->cairo_surface || !app->cairo_surface_back) {
-        perror("Failed to create Cairo surfaces");
-        exit(1);
-    }
-
-    app->cr = cairo_create(app->cairo_surface);
-    app->cr_back = cairo_create(app->cairo_surface_back);
-}
 
 int locus_init(Locus *app, int width_percent, int height_percent) {
     memset(app, 0, sizeof(Locus));
@@ -290,7 +252,7 @@ int locus_init(Locus *app, int width_percent, int height_percent) {
     wl_registry_add_listener(app->registry, &registry_listener, app);
     wl_display_roundtrip(app->display);
 
-    if (!app->compositor || !app->xdg_wm_base || !app->shm ) {
+      if (!app->compositor || !app->xdg_wm_base) {
         fprintf(stderr, "Failed to bind Wayland interfaces\n");
         return 0;
     }
@@ -300,85 +262,59 @@ int locus_init(Locus *app, int width_percent, int height_percent) {
         return 0;
     }
     wl_display_roundtrip(app->display);
-
     if (app->screen_width == 0 || app->screen_height == 0) {
         fprintf(stderr, "Failed to retrieve dimensions\n");
         return 0;
     }
-    
     app->width = (app->screen_width * width_percent) / 100;
     app->height = (app->screen_height * height_percent) / 100;
 
-    create_buffer(app);
+    init_egl(app);
     return 1;
 }
 
 void locus_create_window(Locus *app, const char *title) {
     app->surface = wl_compositor_create_surface(app->compositor);
-    app->xdg_surface =
-        xdg_wm_base_get_xdg_surface(app->xdg_wm_base, app->surface);
+    app->xdg_surface = xdg_wm_base_get_xdg_surface(app->xdg_wm_base, app->surface);
     xdg_surface_add_listener(app->xdg_surface, &xdg_surface_listener, app);
     app->xdg_toplevel = xdg_surface_get_toplevel(app->xdg_surface);
     xdg_toplevel_add_listener(app->xdg_toplevel, &xdg_toplevel_listener, app);
 
     xdg_toplevel_set_title(app->xdg_toplevel, title);
     app->title = strdup(title);
+    
+    app->egl_window = wl_egl_window_create(app->surface, app->width, app->height);
+    app->egl_surface = eglCreateWindowSurface(app->egl_display, app->egl_config, 
+            (EGLNativeWindowType)app->egl_window, NULL);
+    eglMakeCurrent(app->egl_display, app->egl_surface, app->egl_surface, app->egl_context);
+    
     wl_surface_commit(app->surface);
 }
 
-void locus_create_layer_surface(Locus *app, const char *title , uint32_t layer, uint32_t anchor, int exclusive) {
+void locus_create_layer_surface(Locus *app, const char *title, uint32_t layer, 
+        uint32_t anchor, int exclusive) {
     app->surface = wl_compositor_create_surface(app->compositor);
     app->layer_surface = zwlr_layer_shell_v1_get_layer_surface(
-            app->layer_shell, app->surface, NULL, layer, "title");
+            app->layer_shell, app->surface, NULL, layer, title);
+    
     app->title = strdup(title);
     zwlr_layer_surface_v1_set_size(app->layer_surface, app->width, app->height);
     zwlr_layer_surface_v1_set_anchor(app->layer_surface, anchor);
     if (exclusive) {
         zwlr_layer_surface_v1_set_exclusive_zone(app->layer_surface, app->height);
     }
-    zwlr_layer_surface_v1_add_listener(app->layer_surface,
-            &layer_surface_listener, app);
+    
+    zwlr_layer_surface_v1_add_listener(app->layer_surface, &layer_surface_listener, app);
+    
+    app->egl_window = wl_egl_window_create(app->surface, app->width, app->height);
+    app->egl_surface = eglCreateWindowSurface(app->egl_display, app->egl_config, 
+            (EGLNativeWindowType)app->egl_window, NULL);
+    eglMakeCurrent(app->egl_display, app->egl_surface, app->egl_surface, app->egl_context);
+    
     wl_surface_commit(app->surface);
 }
 
-void locus_create_layer_surface_with_margin(Locus *app, const char *title , uint32_t layer, uint32_t anchor, int exclusive, double left, double right, double top, double bottom) {
-    app->surface = wl_compositor_create_surface(app->compositor);
-    app->layer_surface = zwlr_layer_shell_v1_get_layer_surface(
-            app->layer_shell, app->surface, NULL, layer, "title");
-    app->title = strdup(title);
-    zwlr_layer_surface_v1_set_size(app->layer_surface, app->width, app->height);
-    zwlr_layer_surface_v1_set_anchor(app->layer_surface, anchor);
-    zwlr_layer_surface_v1_set_margin(app->layer_surface, top, right, bottom, left);
-    if (exclusive) {
-        zwlr_layer_surface_v1_set_exclusive_zone(app->layer_surface, app->height);
-    }
-    zwlr_layer_surface_v1_add_listener(app->layer_surface,
-            &layer_surface_listener, app);
-    wl_surface_commit(app->surface);
-}
-
-void locus_destroy_layer_surface(Locus *app) {
-    zwlr_layer_surface_v1_destroy(app->layer_surface);
-    wl_surface_destroy(app->surface);
-    app->layer_surface = NULL;
-}
-
-void locus_layer_surface_reconfigure(Locus *app, int new_width, int new_height, uint32_t new_anchor, int new_exclusive_state) {
-    if (app->layer_surface) {
-        app->width = (app->screen_width * new_width) / 100;
-        app->height = (app->screen_height * new_height) / 100;
-        zwlr_layer_surface_v1_set_size(app->layer_surface, app->width, app->height);
-        zwlr_layer_surface_v1_set_anchor(app->layer_surface, new_anchor);
-        if (new_exclusive_state) {
-            zwlr_layer_surface_v1_set_exclusive_zone(app->layer_surface, app->height);
-        }
-        create_buffer(app);
-    }
-}
-
-void locus_set_draw_callback(Locus *app,
-        void (*draw_callback)(cairo_t *cr, int width,
-            int height)) {
+void locus_set_draw_callback(Locus *app, void (*draw_callback)(void *data)) {
     app->draw_callback = draw_callback;
 }
 
@@ -388,228 +324,79 @@ void locus_set_touch_callback(Locus *app,
     app->touch_callback = touch_callback;
 }
 
-void locus_set_partial_draw_callback(Locus *app,
-        void (*partial_draw_callback)(cairo_t *cr, int x, int y, 
-            int width, int height)) {
-    app->partial_draw_callback = partial_draw_callback;
-}
-
-void locus_req_partial_redraw(Locus *app, int x, int y, int width, int height) {
-    app->redraw_partial = 1;
-    app->redraw_x = x;
-    app->redraw_y = y;
-    app->redraw_width = width;
-    app->redraw_height = height;
-}
-
 void locus_run(Locus *app) {
+    // Wait for the surface to be configured
     while (!app->configured) {
         wl_display_dispatch(app->display);
     }
-    app->redraw = 1;
-    while (app->running) {
-        if (wl_display_prepare_read(app->display) != 0) {
-            wl_display_dispatch_pending(app->display);
-        } else {
-            wl_display_flush(app->display);
-            struct timespec ts = {0, 16667000};
-            nanosleep(&ts, NULL);
-        }
-        if (app->redraw) {
-            cairo_save(app->cr_back);
-            cairo_set_operator(app->cr_back, CAIRO_OPERATOR_CLEAR);
-            cairo_rectangle(app->cr_back, 0, 0, app->width, app->height);
-            cairo_fill(app->cr_back);
-            cairo_restore(app->cr_back);
-
-            app->draw_callback(app->cr_back, app->width, app->height);
-            cairo_surface_flush(app->cairo_surface_back);
-            wl_surface_attach(app->surface, app->buffer_back, 0, 0);
-            wl_surface_damage(app->surface, 0, 0, app->width, app->height);
-            wl_surface_commit(app->surface);
-            app->redraw = 0;
-        } else if (app->redraw_partial) {
-            cairo_save(app->cr_back);
-            cairo_set_operator(app->cr_back, CAIRO_OPERATOR_CLEAR);
-            cairo_rectangle(app->cr_back, app->redraw_x, app->redraw_y, app->redraw_width, app->redraw_height);
-            cairo_fill(app->cr_back);
-            cairo_restore(app->cr_back);
-
-            app->partial_draw_callback(app->cr_back, app->redraw_x, app->redraw_y, app->redraw_width, app->redraw_height);
-            cairo_surface_flush(app->cairo_surface_back);
-            wl_surface_attach(app->surface, app->buffer_back, 0, 0);
-            wl_surface_damage(app->surface, app->redraw_x, app->redraw_y, app->redraw_width, app->redraw_height);
-            wl_surface_commit(app->surface);
-            app->redraw_partial = 0;
-        }
-        wl_display_read_events(app->display);
-        wl_display_dispatch_pending(app->display);
-    }
-}
-
-void locus_run_multi(Locus **apps, int num_apps) {
-   int all_configured;
-   do {
-       all_configured = 1;
-       for (int i = 0; i < num_apps; i++) {
-            if (!apps[i]->configured) {
-                all_configured = 0;
-                wl_display_dispatch(apps[i]->display);
-            }
-       }
-   } while (!all_configured);
-
-   for (int i = 0; i < num_apps; i++) {
-    apps[i]->redraw = 1;
-   }
-
-   int all_running;
-   do {
-    all_running = 0;
-
-    for (int i = 0; i < num_apps; i++) {
-        Locus *app = apps[i];
-        if (!app->running) continue;
-
-        all_running = 1;
-
-        if (wl_display_prepare_read(app->display) != 0) {
-            wl_display_dispatch_pending(app->display);
-        } else {
-            wl_display_flush(app->display);
-            struct timespec ts = {0, 16667000};
-            nanosleep(&ts, NULL);
-        }
-
-        if (app->redraw) {
-            cairo_save(app->cr_back);
-            cairo_set_operator(app->cr_back, CAIRO_OPERATOR_CLEAR);
-            cairo_rectangle(app->cr_back, 0, 0, app->width, app->height);
-            cairo_fill(app->cr_back);
-            cairo_restore(app->cr_back);
-
-            app->draw_callback(app->cr_back, app->width, app->height);
-            cairo_surface_flush(app->cairo_surface_back);
-            wl_surface_attach(app->surface, app->buffer_back, 0, 0);
-            wl_surface_damage(app->surface, 0, 0, app->width, app->height);
-            wl_surface_commit(app->surface);
-            app->redraw = 0;
-        } else if (app->redraw_partial) {
-            cairo_save(app->cr_back);
-            cairo_set_operator(app->cr_back, CAIRO_OPERATOR_CLEAR);
-            cairo_rectangle(app->cr_back, app->redraw_x, app->redraw_y, app->redraw_width, app->redraw_height);
-            cairo_fill(app->cr_back);
-            cairo_restore(app->cr_back);
     
-            app->partial_draw_callback(app->cr_back, app->redraw_x, app->redraw_y, app->redraw_width, app->redraw_height);
-            cairo_surface_flush(app->cairo_surface_back);
-            wl_surface_attach(app->surface, app->buffer_back, 0, 0);
-            wl_surface_damage(app->surface, app->redraw_x, app->redraw_y, app->redraw_width, app->redraw_height);
-            wl_surface_commit(app->surface);
-            app->redraw_partial = 0;
+    app->redraw = 1; // Initial draw flag set
+    while (app->running) {
+    // Only process events and try to redraw
+    wl_display_dispatch_pending(app->display); // Dispatch pending events
+
+    if (app->redraw) {
+        printf("Redrawing...\n");
+        eglMakeCurrent(app->egl_display, app->egl_surface, app->egl_surface, app->egl_context);
+        
+        if (app->draw_callback) {
+            app->draw_callback(app);
+        } else {
+            fprintf(stderr, "Draw callback not set\n");
         }
-    }
-    for (int i = 0; i < num_apps; i++) {
-        if (apps[i]->running) {
-            wl_display_read_events(apps[i]->display);
-            wl_display_dispatch_pending(apps[i]->display);
+
+        if (eglSwapBuffers(app->egl_display, app->egl_surface) == EGL_FALSE) {
+            fprintf(stderr, "Failed to swap buffers\n");
         }
+        
+        app->redraw = 0; // Reset redraw flag
     }
-   } while (all_running);
+
+    // Add a small delay to control frame rate if needed
+    struct timespec ts = {0, 16667000}; // ~60 FPS
+    nanosleep(&ts, NULL);
+    }
 }
 
 
 void locus_cleanup(Locus *app) {
-    if (app->cr) {
-        cairo_destroy(app->cr);
-        app->cr = NULL;
+    if (app->egl_surface) {
+        eglDestroySurface(app->egl_display, app->egl_surface);
     }
-    if (app->cr_back) {
-        cairo_destroy(app->cr_back);
-        app->cr_back = NULL;
+    if (app->egl_window) {
+        wl_egl_window_destroy(app->egl_window);
     }
-    if (app->cairo_surface) {
-        cairo_surface_destroy(app->cairo_surface);
-        app->cairo_surface = NULL;
-        if (app->shm_data) {
-            munmap(app->shm_data, app->width * app->height * 4);
-            app->shm_data = NULL;
-        }
+    if (app->egl_context) {
+        eglDestroyContext(app->egl_display, app->egl_context);
     }
-    if (app->cairo_surface_back) {
-        cairo_surface_destroy(app->cairo_surface_back);
-        app->cairo_surface_back = NULL;
-        if (app->shm_data_back) {
-            munmap(app->shm_data_back, app->width * app->height * 4);
-            app->shm_data_back = NULL;
-        }
-    }
-    if (app->buffer) {
-        wl_buffer_destroy(app->buffer);
-        app->buffer = NULL;
-    }
-    if (app->buffer_back) {
-        wl_buffer_destroy(app->buffer_back);
-        app->buffer_back = NULL;
+    if (app->egl_display) {
+        eglTerminate(app->egl_display);
     }
     if (app->xdg_toplevel) {
         xdg_toplevel_destroy(app->xdg_toplevel);
-        app->xdg_toplevel = NULL;
     }
     if (app->xdg_surface) {
         xdg_surface_destroy(app->xdg_surface);
-        app->xdg_surface = NULL;
     }
     if (app->layer_surface) {
         zwlr_layer_surface_v1_destroy(app->layer_surface);
-        app->layer_surface = NULL;
-    }
-    if (app->output) {
-        wl_output_destroy(app->output);
-        app->output = NULL;
-    }
-    if (app->xdg_toplevel) {
-        xdg_toplevel_destroy(app->xdg_toplevel);
-        app->xdg_toplevel = NULL;
-    }
-    if (app->xdg_surface) {
-        xdg_surface_destroy(app->xdg_surface);
-        app->xdg_surface = NULL;
-    }
-    if (app->layer_surface) {
-        zwlr_layer_surface_v1_destroy(app->layer_surface);
-        app->layer_surface = NULL;
-    }
-    if (app->output) {
-        wl_output_destroy(app->output);
-        app->output = NULL;
     }
     if (app->surface) {
         wl_surface_destroy(app->surface);
-        app->surface = NULL;
     }
     if (app->xdg_wm_base) {
         xdg_wm_base_destroy(app->xdg_wm_base);
-        app->xdg_wm_base = NULL;
     }
     if (app->compositor) {
         wl_compositor_destroy(app->compositor);
-        app->compositor = NULL;
     }
     if (app->registry) {
         wl_registry_destroy(app->registry);
-        app->registry = NULL;
-    }
-    if (app->seat) {
-        wl_seat_destroy(app->seat);
-        app->seat = NULL;
-    }
-    if (app->touch) {
-        wl_touch_destroy(app->touch);
-        app->touch = NULL;
     }
     if (app->display) {
         wl_display_disconnect(app->display);
-        app->display = NULL;
+    }
+    if (app->title) {
+        free(app->title);
     }
 }

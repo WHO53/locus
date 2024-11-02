@@ -1,139 +1,92 @@
-#include <cairo.h>
-#include <math.h>
-#include <stdio.h>
-#include <string.h>
-#include <librsvg/rsvg.h>
 #include "locus-ui.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <EGL/egl.h>
+#include <GLES2/gl2.h>
 
-void locus_color(cairo_t *cr, double red, double green, double blue, double alpha) {
-    red = red / 255.0;
-    blue = blue / 255.0;
-    green = green / 255.0;
-    cairo_set_source_rgba(cr, red, green, blue, alpha);
+static GLuint shader_program;
+static GLint position_attr, color_uniform;
+
+// Vertex shader source code
+const char* vertex_shader_source =
+    "attribute vec4 position;\n"
+    "void main() {\n"
+    "    gl_Position = position;\n"
+    "}\n";
+
+// Fragment shader source code
+const char* fragment_shader_source =
+    "precision mediump float;\n"
+    "uniform vec4 color;\n"
+    "void main() {\n"
+    "    gl_FragColor = color;\n"
+    "}\n";
+
+GLuint create_shader(GLenum type, const char* source) {
+    GLuint shader = glCreateShader(type);
+    glShaderSource(shader, 1, &source, NULL);
+    glCompileShader(shader);
+
+    // Check for shader compile errors
+    GLint compiled;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+    if (!compiled) {
+        GLint log_length;
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length);
+        char* log = (char*) malloc(log_length);
+        glGetShaderInfoLog(shader, log_length, NULL, log);
+        fprintf(stderr, "Shader compilation failed: %s\n", log);
+        free(log);
+        glDeleteShader(shader);
+        return 0;
+    }
+
+    return shader;
 }
 
-void locus_rectangle(cairo_t *cr, double center_x, double center_y, double width, double height, double radius, unsigned int corner_flags) {
-    double x = center_x - width / 2.0;
-    double y = center_y - height / 2.0;
-    cairo_new_path(cr);
-    if (corner_flags & TOP_LEFT) {
-        cairo_move_to(cr, x + radius, y);
-    } else {
-        cairo_move_to(cr, x, y);
-    }
-    if (corner_flags & TOP_RIGHT) {
-        cairo_line_to(cr, x + width - radius, y);
-        cairo_arc(cr, x + width - radius, y + radius, radius, -M_PI / 2, 0);
-    } else {
-        cairo_line_to(cr, x + width, y);
-    }
-    if (corner_flags & BOTTOM_RIGHT) {
-        cairo_line_to(cr, x + width, y + height - radius);
-        cairo_arc(cr, x + width - radius, y + height - radius, radius, 0, M_PI / 2);
-    } else {
-        cairo_line_to(cr, x + width, y + height);
-    }
-    if (corner_flags & BOTTOM_LEFT) {
-        cairo_line_to(cr, x + radius, y + height);
-        cairo_arc(cr, x + radius, y + height - radius, radius, M_PI / 2, M_PI);
-    } else {
-        cairo_line_to(cr, x, y + height);
-    }
-    if (corner_flags & TOP_LEFT) {
-        cairo_line_to(cr, x, y + radius);
-        cairo_arc(cr, x + radius, y + radius, radius, M_PI, 3 * M_PI / 2);
-    } else {
-        cairo_line_to(cr, x, y);
-    }
-    cairo_close_path(cr);
-    cairo_fill(cr);
+void locus_init_gl() {
+    GLuint vertex_shader = create_shader(GL_VERTEX_SHADER, vertex_shader_source);
+    GLuint fragment_shader = create_shader(GL_FRAGMENT_SHADER, fragment_shader_source);
+
+    shader_program = glCreateProgram();
+    glAttachShader(shader_program, vertex_shader);
+    glAttachShader(shader_program, fragment_shader);
+    glLinkProgram(shader_program);
+
+    // Use the shader program
+    glUseProgram(shader_program);
+
+    // Get attribute and uniform locations
+    position_attr = glGetAttribLocation(shader_program, "position");
+    color_uniform = glGetUniformLocation(shader_program, "color");
+
+    // Set up OpenGL settings
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-int locus_file_exists(const char *path) {
-    FILE *file = fopen(path, "r");
-    if (file) {
-        fclose(file);
-        return 1;
-    }
-    return 0;
-}
+void locus_draw_rectangle(float x, float y, float width, float height, float red, float green, float blue, float alpha) {
+    glUseProgram(shader_program);
 
-char *locus_find_icon(const char *icon_name) {
-    static char path[1024];
-    const char *icon_dirs[] = {
-        "/home/droidian/temp/Fluent-grey-dark/scalable/apps/",
-        "/home/droidian/temp/Fluent-grey-dark/symbolic/status/",
-        "/usr/share/icons/hicolor/scalable/apps/",
-        "/usr/share/icons/hicolor/128x128/apps/",
-        "/usr/share/icons/Adwaita/symbolic/status/",
-        "/usr/share/pixmaps/",
-        NULL
+    // Define rectangle vertices
+    GLfloat vertices[] = {
+        x, y,             // Bottom left
+        x + width, y,    // Bottom right
+        x, y + height,   // Top left
+        x + width, y + height  // Top right
     };
-    
-    for (int i = 0; icon_dirs[i] != NULL; ++i) {
-        if (strcmp(icon_dirs[i], "/usr/share/pixmaps/") == 0) {
-            snprintf(path, sizeof(path), "%s%s.png", icon_dirs[i], icon_name);
-            if (locus_file_exists(path)) return path;
-        } else {
-            snprintf(path, sizeof(path), "%s%s.svg", icon_dirs[i], icon_name);
-            if (locus_file_exists(path)) return path;
-        }
-    }
-    return NULL;
-}
 
-void locus_icon(cairo_t *cr, double center_x, double center_y, const char *icon_name, double width, double height) { 
-    double x = center_x - width / 2.0;
-    double y = center_y - height / 2.0;
-    char *icon_path = locus_find_icon(icon_name);
-    cairo_surface_t *icon_surface = NULL;
+    // Set the color uniform
+    glUniform4f(color_uniform, red, green, blue, alpha);
 
-    if (icon_path != NULL) {
-        if (strstr(icon_path, ".svg")) {
-            RsvgHandle *svg = rsvg_handle_new_from_file(icon_path, NULL);
-            RsvgRectangle viewport = { 0, 0, width, height };
-            if (svg) {
-                cairo_save(cr);
-                cairo_translate(cr, x, y);
-                rsvg_handle_render_document(svg, cr, &viewport, NULL);
-                cairo_restore(cr);
-                g_object_unref(svg);
-            }
-        } else {
-            icon_surface = cairo_image_surface_create_from_png(icon_path);
-            if (cairo_surface_status(icon_surface) == CAIRO_STATUS_SUCCESS) {
-                double icon_width = cairo_image_surface_get_width(icon_surface);
-                double icon_height = cairo_image_surface_get_height(icon_surface);
-                cairo_save(cr);
-                cairo_translate(cr, x, y);
-                cairo_scale(cr, (double)width / icon_width, (double)height / icon_height);
-                cairo_set_source_surface(cr, icon_surface, 0, 0);
-                cairo_paint(cr);
-                cairo_restore(cr);
-                cairo_surface_destroy(icon_surface);
-            }
-        }
-    }
+    // Pass the vertex data to the shader
+    glVertexAttribPointer(position_attr, 2, GL_FLOAT, GL_FALSE, 0, vertices);
+    glEnableVertexAttribArray(position_attr);
 
-    if (!icon_surface && !icon_path) {
-        cairo_set_source_rgb(cr, 0.2, 0.6, 0.8);
-        cairo_rectangle(cr, x, y, width, height);
-        cairo_fill(cr);
-    }
-}
+    // Draw the rectangle as two triangles (triangle strip)
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-void locus_text(cairo_t *cr, const char *text, double center_x, double center_y, double size, FontWeight font_weight){
-    cairo_font_weight_t weight;
-    weight = (font_weight == BOLD) ? CAIRO_FONT_WEIGHT_BOLD : CAIRO_FONT_WEIGHT_NORMAL;
-    cairo_select_font_face(cr, "Poppins Thin", 
-            CAIRO_FONT_SLANT_NORMAL, weight);
-    cairo_set_font_size(cr, size);
-    
-    cairo_text_extents_t extents;
-    cairo_text_extents(cr, text, &extents);
-    
-    cairo_move_to(cr,
-            center_x - extents.width / 2,
-            center_y + extents.height / 2); 
-    cairo_show_text(cr, text);
+    // Disable the vertex attribute
+    glDisableVertexAttribArray(position_attr);
 }

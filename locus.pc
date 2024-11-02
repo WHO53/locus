@@ -5,7 +5,7 @@ incdir=${prefix}/include/locus
 Name: Locus
 Description: A library for creating simple wayland apps with cairo
 Version: 0.1.0
-Requires: wayland-client cairo wayland-protocols librsvg-2.0
+Requires: wayland-client glesv2 wayland-protocols librsvg-2.0
 Libs: -L${libdir} -llocus
 Cflags: -I${incdir}
 
