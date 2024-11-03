@@ -42,7 +42,6 @@ struct Locus {
     void (*touch_callback)(int32_t id, double x, double y, int32_t state);
 };
 
-
 int locus_init(Locus *app, int width, int height);
 void locus_create_window(Locus *app, const char *title);
 void locus_create_layer_surface(Locus *app, const char *title, uint32_t layer, uint32_t anchor, int exclusive);
