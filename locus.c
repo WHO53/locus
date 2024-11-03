@@ -41,6 +41,8 @@ static void handle_xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_t
 
 static void handle_xdg_toplevel_close(void *data, struct xdg_toplevel *xdg_toplevel) {
     Locus *app = data;
+    app->xdg_toplevel = NULL;
+    wl_egl_window_destroy(app->egl_window);
     app->running = 0;
 }
 
@@ -153,6 +155,8 @@ static void handle_layer_surface_configure(void *data,
 static void handle_layer_surface_closed(void *data,
         struct zwlr_layer_surface_v1 *layer_surface) {
     Locus *app = data;
+    app->layer_surface = NULL;
+    wl_egl_window_destroy(app->egl_window);
     app->running = 0;
 }
 
@@ -230,7 +234,7 @@ static void registry_global(void *data, struct wl_registry *registry,
 }
 
 static void registry_global_remove(void *data, struct wl_registry *registry, uint32_t name) {
-    // This space intentionally left blank
+    
 }
 
 static const struct wl_registry_listener registry_listener = {
@@ -325,15 +329,15 @@ void locus_set_touch_callback(Locus *app,
 }
 
 void locus_run(Locus *app) {
-    // Wait for the surface to be configured
+    
     while (!app->configured) {
         wl_display_dispatch(app->display);
     }
     
-    app->redraw = 1; // Initial draw flag set
+    app->redraw = 1; 
     while (app->running) {
-    // Only process events and try to redraw
-    wl_display_dispatch_pending(app->display); // Dispatch pending events
+    
+    wl_display_dispatch_pending(app->display); 
 
     if (app->redraw) {
         printf("Redrawing...\n");
@@ -349,11 +353,11 @@ void locus_run(Locus *app) {
             fprintf(stderr, "Failed to swap buffers\n");
         }
         
-        app->redraw = 0; // Reset redraw flag
+        app->redraw = 0; 
     }
 
-    // Add a small delay to control frame rate if needed
-    struct timespec ts = {0, 16667000}; // ~60 FPS
+    
+    struct timespec ts = {0, 16667000}; 
     nanosleep(&ts, NULL);
     }
 }

@@ -23,6 +23,10 @@ struct Locus {
     EGLConfig egl_config;
     EGLSurface egl_surface;
     GLuint program;
+    GLuint texture;            
+    GLint position_loc;        
+    GLint texcoord_loc;        
+    GLint sampler_loc;         
     struct xdg_wm_base *xdg_wm_base;
     struct xdg_surface *xdg_surface;
     struct xdg_toplevel *xdg_toplevel;
@@ -38,7 +42,7 @@ struct Locus {
     void (*touch_callback)(int32_t id, double x, double y, int32_t state);
 };
 
-// Function declarations
+
 int locus_init(Locus *app, int width, int height);
 void locus_create_window(Locus *app, const char *title);
 void locus_create_layer_surface(Locus *app, const char *title, uint32_t layer, uint32_t anchor, int exclusive);
@@ -47,4 +51,4 @@ void locus_set_touch_callback(Locus *app, void (*touch_callback)(int32_t id, dou
 void locus_run(Locus *app);
 void locus_cleanup(Locus *app);
 
-#endif // LOCUS_H
+#endif 
