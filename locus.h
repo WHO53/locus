@@ -22,11 +22,6 @@ struct Locus {
     EGLContext egl_context;
     EGLConfig egl_config;
     EGLSurface egl_surface;
-    GLuint program;
-    GLuint texture;            
-    GLint position_loc;        
-    GLint texcoord_loc;        
-    GLint sampler_loc;         
     struct xdg_wm_base *xdg_wm_base;
     struct xdg_surface *xdg_surface;
     struct xdg_toplevel *xdg_toplevel;
