@@ -349,9 +349,13 @@ void locus_run(Locus *app) {
             fprintf(stderr, "Draw callback not set\n");
         }
 
+        wl_surface_damage(app->surface, 0, 0, app->width, app->height);
+
         if (eglSwapBuffers(app->egl_display, app->egl_surface) == EGL_FALSE) {
             fprintf(stderr, "Failed to swap buffers\n");
         }
+
+        wl_surface_commit(app->surface);
         
         app->redraw = 0; 
     }
