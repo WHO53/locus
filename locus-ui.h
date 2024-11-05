@@ -1,13 +1,17 @@
 #ifndef LOCUS_UI_H
 #define LOCUS_UI_H
 
-#include <GLES2/gl2.h>  
+#include <nanovg.h>
 
-void locus_setup_gles();
+typedef struct {
+    NVGcontext* vg;
+} LocusUI;
 
-void locus_cleanup_gles();
+void locus_setup_ui(LocusUI* ui);  
 
-void locus_rectangle(float x, float y, float width, float height, 
+void locus_rectangle(LocusUI* ui, float x, float y, float width, float height, 
                     float red, float green, float blue, float alpha);
+
+void locus_cleanup_ui(LocusUI* ui);  
 
 #endif 

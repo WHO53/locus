@@ -13,7 +13,7 @@ LOCUS_HEADERS += $(wildcard $(SRC)/*.h)
 
 CFLAGS += -std=gnu99 -Wall -g -DWITH_WAYLAND_SHM -fPIC
 CFLAGS += $(shell pkg-config --cflags $(PKGS))
-LDFLAGS += $(shell pkg-config --libs $(PKGS)) -lm -lutil -lrt
+LDFLAGS += $(shell pkg-config --libs $(PKGS)) -lm -lutil -lrt -L/lib/aarch64-linux-gnu/libnanovg.a -lnanovg
 
 WAYLAND_HEADERS = $(wildcard proto/*.xml)
 
