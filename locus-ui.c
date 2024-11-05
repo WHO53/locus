@@ -15,9 +15,9 @@ void locus_setup_ui(LocusUI* ui) {
 }
 
 void locus_rectangle(LocusUI* ui, float x, float y, float width, float height, 
-                    float red, float green, float blue, float alpha) {
+                     float red, float green, float blue, float alpha, float cornerRadius) {
     nvgBeginPath(ui->vg);
-    nvgRect(ui->vg, x, y, width, height);
+    nvgRoundedRect(ui->vg, x, y, width, height, cornerRadius);
     nvgFillColor(ui->vg, nvgRGBA((int)(red * 255), (int)(green * 255), (int)(blue * 255), (int)(alpha * 255)));
     nvgFill(ui->vg);
 }

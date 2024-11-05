@@ -10,7 +10,7 @@ typedef struct {
 void locus_setup_ui(LocusUI* ui);  
 
 void locus_rectangle(LocusUI* ui, float x, float y, float width, float height, 
-                    float red, float green, float blue, float alpha);
+                    float red, float green, float blue, float alpha, float cornerRadius);
 
 void locus_cleanup_ui(LocusUI* ui);  
 
