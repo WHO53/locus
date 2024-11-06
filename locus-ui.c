@@ -32,6 +32,43 @@ void locus_text(LocusUI* ui, const char* text, float x, float y,
     nvgFillColor(ui->vg, nvgRGBA((int)(red * 255), (int)(green * 255), (int)(blue * 255), (int)(alpha * 255)));
     nvgText(ui->vg, x, y, text, NULL);
 }
+
+void locus_image(LocusUI* ui, const char* imagePath, float x, float y, float width, float height) {
+
+    int image = nvgCreateImage(ui->vg, imagePath, 0); 
+    if (image == 0) {
+        fprintf(stderr, "Failed to load image: %s\n", imagePath);
+        return;
+    }
+
+    int imgWidth, imgHeight;
+    nvgImageSize(ui->vg, image, &imgWidth, &imgHeight);
+
+    if (imgWidth == 0 || imgHeight == 0) {
+        fprintf(stderr, "Image dimensions are invalid.\n");
+        nvgDeleteImage(ui->vg, image);  
+        return;
+    }
+
+    float iw, ih, ix = 0.0f, iy = 0.0f;
+    if (imgWidth < imgHeight) {
+        iw = width;
+        ih = iw * imgHeight / imgWidth;
+        iy = -(ih - height) * 0.5f;
+    } else {
+        ih = height;
+        iw = ih * imgWidth / imgHeight;
+        ix = -(iw - width) * 0.5f;
+    }
+
+    NVGpaint imgPaint = nvgImagePattern(ui->vg, x + ix, y + iy, iw, ih, 0.0f, image, 1.0f);
+
+    nvgBeginPath(ui->vg);
+    nvgRect(ui->vg, x, y, width, height);
+    nvgFillPaint(ui->vg, imgPaint);  
+    nvgFill(ui->vg);  
+}
+
 void locus_cleanup_ui(LocusUI* ui) {
     nvgDeleteGLES2(ui->vg); 
 }

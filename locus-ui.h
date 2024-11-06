@@ -15,6 +15,9 @@ void locus_rectangle(LocusUI* ui, float x, float y, float width, float height,
 void locus_text(LocusUI* ui, const char* text, float x, float y, 
                 float fontSize, float red, float green, float blue, float alpha);
 
+void locus_image(LocusUI* ui, const char* imagePath, float x, float y,
+                 float width, float height);
+
 void locus_cleanup_ui(LocusUI* ui);  
 
 #endif 
