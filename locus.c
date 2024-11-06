@@ -30,7 +30,7 @@ static void handle_configure(void *data, struct xdg_surface *xdg_surface, uint32
 }
 
 static void handle_xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel,
-        int32_t width, int32_t height, struct wl_array *states) {
+                                          int32_t width, int32_t height, struct wl_array *states) {
     Locus *app = data;
     if (width > 0 && height > 0) {
         if (app->egl_window) {
@@ -47,15 +47,15 @@ static void handle_xdg_toplevel_close(void *data, struct xdg_toplevel *xdg_tople
 }
 
 static void handle_geometry(void *data, struct wl_output *output,
-        int32_t x, int32_t y, int32_t physical_width,
-        int32_t physical_height, int32_t subpixel,
-        const char *make, const char *model,
-        int32_t transform) {
+                            int32_t x, int32_t y, int32_t physical_width,
+                            int32_t physical_height, int32_t subpixel,
+                            const char *make, const char *model,
+                            int32_t transform) {
 }
 
 static void handle_mode(void *data, struct wl_output *output,
-        uint32_t flags, int32_t width, int32_t height,
-        int32_t refresh) {
+                        uint32_t flags, int32_t width, int32_t height,
+                        int32_t refresh) {
     Locus *app = data;
     if (flags & WL_OUTPUT_MODE_CURRENT) {
         app->screen_width = width;
@@ -70,9 +70,9 @@ static void handle_scale(void *data, struct wl_output *output, int32_t factor) {
 }
 
 static void touch_handle_down(void *data, struct wl_touch *wl_touch,
-        uint32_t serial, uint32_t time,
-        struct wl_surface *surface, int32_t id,
-        wl_fixed_t x, wl_fixed_t y) {
+                              uint32_t serial, uint32_t time,
+                              struct wl_surface *surface, int32_t id,
+                              wl_fixed_t x, wl_fixed_t y) {
     Locus *app = data;
     double touch_x = wl_fixed_to_double(x);
     double touch_y = wl_fixed_to_double(y);
@@ -83,7 +83,7 @@ static void touch_handle_down(void *data, struct wl_touch *wl_touch,
 }
 
 static void touch_handle_up(void *data, struct wl_touch *wl_touch,
-        uint32_t serial, uint32_t time, int32_t id) {
+                            uint32_t serial, uint32_t time, int32_t id) {
     Locus *app = data;
     if(app->touch_callback) {
         app->touch_callback(id, 0, 0, 1);
@@ -91,8 +91,8 @@ static void touch_handle_up(void *data, struct wl_touch *wl_touch,
 }
 
 static void touch_handle_motion(void *data, struct wl_touch *wl_touch,
-        uint32_t time, int32_t id, wl_fixed_t x,
-        wl_fixed_t y) {
+                                uint32_t time, int32_t id, wl_fixed_t x,
+                                wl_fixed_t y) {
     Locus *app = data;
     double touch_x = wl_fixed_to_double(x);
     double touch_y = wl_fixed_to_double(y);
@@ -112,7 +112,7 @@ static const struct wl_touch_listener touch_listener = {
 };
 
 static void handle_seat_capabilities(void *data, struct wl_seat *seat, 
-        uint32_t capabilities) {
+                                     uint32_t capabilities) {
     Locus *app = data;
 
     if (capabilities & WL_SEAT_CAPABILITY_TOUCH) {
@@ -122,7 +122,7 @@ static void handle_seat_capabilities(void *data, struct wl_seat *seat,
 }
 
 static void handle_seat_name(void *data, struct wl_seat *seat, 
-        const char *name) {
+                             const char *name) {
 }
 
 static const struct wl_output_listener output_listener = {
@@ -138,8 +138,8 @@ static const struct wl_seat_listener seat_listener = {
 };
 
 static void handle_layer_surface_configure(void *data, 
-        struct zwlr_layer_surface_v1 *layer_surface,
-        uint32_t serial, uint32_t width, uint32_t height) {
+                                           struct zwlr_layer_surface_v1 *layer_surface,
+                                           uint32_t serial, uint32_t width, uint32_t height) {
     Locus *app = data;
     zwlr_layer_surface_v1_ack_configure(layer_surface, serial);
 
@@ -153,7 +153,7 @@ static void handle_layer_surface_configure(void *data,
 }
 
 static void handle_layer_surface_closed(void *data,
-        struct zwlr_layer_surface_v1 *layer_surface) {
+                                        struct zwlr_layer_surface_v1 *layer_surface) {
     Locus *app = data;
     app->layer_surface = NULL;
     wl_egl_window_destroy(app->egl_window);
@@ -209,12 +209,12 @@ static void init_egl(Locus *app) {
     app->egl_config = configs[0];
 
     app->egl_context = eglCreateContext(app->egl_display, app->egl_config, 
-            EGL_NO_CONTEXT, context_attribs);
+                                        EGL_NO_CONTEXT, context_attribs);
     free(configs);
 }
 
 static void registry_global(void *data, struct wl_registry *registry,
-        uint32_t name, const char *interface, uint32_t version) {
+                            uint32_t name, const char *interface, uint32_t version) {
     Locus *app = data;
 
     if (strcmp(interface, wl_compositor_interface.name) == 0) {
@@ -289,17 +289,17 @@ void locus_create_window(Locus *app, const char *title) {
 
     app->egl_window = wl_egl_window_create(app->surface, app->width, app->height);
     app->egl_surface = eglCreateWindowSurface(app->egl_display, app->egl_config, 
-            (EGLNativeWindowType)app->egl_window, NULL);
+                                              (EGLNativeWindowType)app->egl_window, NULL);
     eglMakeCurrent(app->egl_display, app->egl_surface, app->egl_surface, app->egl_context);
 
     wl_surface_commit(app->surface);
 }
 
 void locus_create_layer_surface(Locus *app, const char *title, uint32_t layer, 
-        uint32_t anchor, int exclusive) {
+                                uint32_t anchor, int exclusive) {
     app->surface = wl_compositor_create_surface(app->compositor);
     app->layer_surface = zwlr_layer_shell_v1_get_layer_surface(
-            app->layer_shell, app->surface, NULL, layer, title);
+        app->layer_shell, app->surface, NULL, layer, title);
 
     app->title = strdup(title);
     zwlr_layer_surface_v1_set_size(app->layer_surface, app->width, app->height);
@@ -312,7 +312,7 @@ void locus_create_layer_surface(Locus *app, const char *title, uint32_t layer,
 
     app->egl_window = wl_egl_window_create(app->surface, app->width, app->height);
     app->egl_surface = eglCreateWindowSurface(app->egl_display, app->egl_config, 
-            (EGLNativeWindowType)app->egl_window, NULL);
+                                              (EGLNativeWindowType)app->egl_window, NULL);
     eglMakeCurrent(app->egl_display, app->egl_surface, app->egl_surface, app->egl_context);
 
     wl_surface_commit(app->surface);
@@ -323,8 +323,8 @@ void locus_set_draw_callback(Locus *app, void (*draw_callback)(void *data)) {
 }
 
 void locus_set_touch_callback(Locus *app,
-        void (*touch_callback)(int32_t id, double x,
-            double y, int32_t state)) {
+                              void (*touch_callback)(int32_t id, double x,
+                                                     double y, int32_t state)) {
     app->touch_callback = touch_callback;
 }
 
@@ -340,7 +340,6 @@ void locus_run(Locus *app) {
         wl_display_dispatch_pending(app->display); 
 
         if (app->redraw) {
-            printf("Redrawing...\n");
             eglMakeCurrent(app->egl_display, app->egl_surface, app->egl_surface, app->egl_context);
 
             if (app->draw_callback) {
