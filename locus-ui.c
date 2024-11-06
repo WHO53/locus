@@ -22,6 +22,16 @@ void locus_rectangle(LocusUI* ui, float x, float y, float width, float height,
     nvgFill(ui->vg);
 }
 
+void locus_text(LocusUI* ui, const char* text, float x, float y, 
+                float fontSize, float red, float green, float blue, float alpha) {
+    nvgBeginPath(ui->vg);  
+    nvgCreateFont(ui->vg, "font", "/home/droidian/.local/share/fonts/MonofurNerdFont-Regular.ttf");
+    nvgFontFace(ui->vg, "font");  
+    nvgFontSize(ui->vg, fontSize);
+    nvgTextAlign(ui->vg, NVG_ALIGN_LEFT | NVG_ALIGN_BASELINE);  
+    nvgFillColor(ui->vg, nvgRGBA((int)(red * 255), (int)(green * 255), (int)(blue * 255), (int)(alpha * 255)));
+    nvgText(ui->vg, x, y, text, NULL);
+}
 void locus_cleanup_ui(LocusUI* ui) {
     nvgDeleteGLES2(ui->vg); 
 }
