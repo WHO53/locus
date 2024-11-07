@@ -335,7 +335,13 @@ void locus_run(Locus *app) {
     app->redraw = 1; 
     while (app->running) {
 
-        wl_display_dispatch_pending(app->display); 
+        if (wl_display_prepare_read(app->display) != 0) {
+            wl_display_dispatch_pending(app->display);
+        } else {
+            wl_display_flush(app->display);
+            struct timespec ts = {0, 16667000};
+            nanosleep(&ts, NULL);
+        }
 
         if (app->redraw) {
             eglMakeCurrent(app->egl_display, app->egl_surface, app->egl_surface, app->egl_context);
@@ -356,9 +362,8 @@ void locus_run(Locus *app) {
 
             app->redraw = 0; 
         }
-
-        struct timespec ts = {0, 16667000}; 
-        nanosleep(&ts, NULL);
+        wl_display_read_events(app->display);
+        wl_display_dispatch_pending(app->display);
     }
 }
 
