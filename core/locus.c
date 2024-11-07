@@ -1,5 +1,4 @@
 #include "locus.h"
-#include "proto/wlr-layer-shell-unstable-v1-client-protocol.h"
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include <GLES2/gl2.h>
@@ -9,7 +8,6 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <wayland-client-protocol.h>
 #include <wayland-egl.h>
 
 static void handle_ping(void *data, struct xdg_wm_base *xdg_wm_base, uint32_t serial) {

@@ -6,14 +6,14 @@ INCDIR = $(PREFIX)/include/$(NAME)
 LIBDIR = $(PREFIX)/lib
 PCDIR = $(LIBDIR)/pkgconfig
 
-PKGS = wayland-client wayland-protocols egl glesv2 wayland-egl
+PKGS = wayland-client wayland-protocols egl glesv2 wayland-egl stb librsvg-2.0
 
-LOCUS_SOURCES += $(wildcard $(SRC)/*.c)
-LOCUS_HEADERS += $(wildcard $(SRC)/*.h)
+LOCUS_SOURCES += $(wildcard $(SRC)/*.c) $(wildcard $(SRC)/**/*.c) 
+LOCUS_HEADERS += $(wildcard $(SRC)/*.h) $(wildcard $(SRC)/**/*.h) 
 
 CFLAGS += -std=gnu99 -Wall -g -DWITH_WAYLAND_SHM -fPIC
-CFLAGS += $(shell pkg-config --cflags $(PKGS))
-LDFLAGS += $(shell pkg-config --libs $(PKGS)) -lm -lutil -lrt -L/lib/aarch64-linux-gnu/libnanovg.a -lnanovg
+CFLAGS += $(shell pkg-config --cflags $(PKGS)) -I/usr/include/nanosvg/
+LDFLAGS += $(shell pkg-config --libs $(PKGS)) -lm -lutil -lrt -L/lib/aarch64-linux-gnu/libnanovg.a -lnanovg -L/lib/aarch64-linux-gnu/libnanosvg.a -lnanosvg
 
 WAYLAND_HEADERS = $(wildcard proto/*.xml)
 

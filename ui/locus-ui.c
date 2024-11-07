@@ -5,6 +5,7 @@
 #define NANOVG_GLES2_IMPLEMENTATION
 #include "nanovg_gl.h"
 #include "locus-ui.h"
+#include <unistd.h>
 
 void locus_setup_ui(LocusUI* ui) {
     ui->vg = nvgCreateGLES2(NVG_ANTIALIAS | NVG_STENCIL_STROKES);
@@ -34,7 +35,6 @@ void locus_text(LocusUI* ui, const char* text, float x, float y,
 }
 
 void locus_image(LocusUI* ui, const char* imagePath, float x, float y, float width, float height) {
-
     int image = nvgCreateImage(ui->vg, imagePath, 0); 
     if (image == 0) {
         fprintf(stderr, "Failed to load image: %s\n", imagePath);
@@ -67,6 +67,26 @@ void locus_image(LocusUI* ui, const char* imagePath, float x, float y, float wid
     nvgRect(ui->vg, x, y, width, height);
     nvgFillPaint(ui->vg, imgPaint);  
     nvgFill(ui->vg);  
+}
+
+int file_exists(const char* filename) {
+    return access(filename, F_OK) != -1;
+}
+
+void locus_icon(LocusUI* ui, const char* icon_name, float x, float y, float size) {
+    char icon_path[512]; 
+    snprintf(icon_path, sizeof(icon_path), "/home/droidian/.local/share/locus/%s.png", icon_name);
+
+    if (!file_exists(icon_path)) {
+        snprintf(icon_path, sizeof(icon_path), "/usr/share/pixmaps/%s.png", icon_name);
+        if (!file_exists(icon_path)) {
+            fprintf(stderr, "Error: Icon '%s.png' not found in either /home/droidian/.local/share/locus/ or /usr/share/pixmaps/\n", icon_name);
+        }
+        locus_gen_png(icon_name);
+        snprintf(icon_path, sizeof(icon_path), "/home/droidian/.local/share/locus/%s.png", icon_name);
+    }
+
+    locus_image(ui, icon_path, x, y, size, size);
 }
 
 void locus_cleanup_ui(LocusUI* ui) {
