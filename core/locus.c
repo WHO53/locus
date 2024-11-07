@@ -346,6 +346,9 @@ void locus_run(Locus *app) {
         if (app->redraw) {
             eglMakeCurrent(app->egl_display, app->egl_surface, app->egl_surface, app->egl_context);
 
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
             if (app->draw_callback) {
                 app->draw_callback(app);
             } else {
