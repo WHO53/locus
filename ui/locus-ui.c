@@ -90,5 +90,8 @@ void locus_icon(LocusUI* ui, const char* icon_name, float x, float y, float size
 }
 
 void locus_cleanup_ui(LocusUI* ui) {
-    nvgDeleteGLES2(ui->vg); 
+    if (ui->vg) {
+        nvgDeleteGLES2(ui->vg); 
+        ui->vg = NULL;
+    }
 }

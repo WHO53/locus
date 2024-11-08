@@ -390,41 +390,54 @@ void locus_run(Locus *app) {
 void locus_cleanup(Locus *app) {
     if (app->egl_surface) {
         eglDestroySurface(app->egl_display, app->egl_surface);
+        app->egl_surface = NULL;
     }
     if (app->egl_window) {
         wl_egl_window_destroy(app->egl_window);
+        app->egl_window = NULL;
     }
     if (app->egl_context) {
         eglDestroyContext(app->egl_display, app->egl_context);
+        app->egl_context = NULL;
     }
     if (app->egl_display) {
         eglTerminate(app->egl_display);
+        app->egl_display = NULL;
     }
     if (app->xdg_toplevel) {
         xdg_toplevel_destroy(app->xdg_toplevel);
+        app->xdg_toplevel = NULL;
     }
     if (app->xdg_surface) {
         xdg_surface_destroy(app->xdg_surface);
+        app->xdg_surface = NULL;
     }
     if (app->layer_surface) {
         zwlr_layer_surface_v1_destroy(app->layer_surface);
+        app->layer_surface = NULL;
     }
     if (app->surface) {
         wl_surface_destroy(app->surface);
+        app->surface = NULL;
     }
     if (app->xdg_wm_base) {
         xdg_wm_base_destroy(app->xdg_wm_base);
+        app->xdg_wm_base = NULL;
     }
     if (app->compositor) {
         wl_compositor_destroy(app->compositor);
+        app->compositor = NULL;
     }
     if (app->registry) {
         wl_registry_destroy(app->registry);
+        app->registry = NULL;
     }
     if (app->display) {
         wl_display_disconnect(app->display);
+        app->display = NULL;
     }
     if (app->title) {
         free(app->title);
+        app->title = NULL;
     }
 }
