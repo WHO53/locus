@@ -8,6 +8,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <wayland-client-protocol.h>
 #include <wayland-egl.h>
 
 static void handle_ping(void *data, struct xdg_wm_base *xdg_wm_base, uint32_t serial) {
@@ -162,8 +163,8 @@ static void handle_layer_surface_configure(void *data,
             app->redraw = 1;
         }
     }
-
     app->configured = 1;
+    wl_surface_commit(app->surface);
 }
 
 static void handle_layer_surface_closed(void *data,
