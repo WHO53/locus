@@ -32,6 +32,7 @@ struct Locus {
     int configured;
     int running;
     int redraw;
+    int active_touches;
     char *title;
     void (*draw_callback)(void *data);
     void (*touch_callback)(int32_t id, double x, double y, int32_t state);

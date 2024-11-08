@@ -75,7 +75,9 @@ static void touch_handle_down(void *data, struct wl_touch *wl_touch,
     double touch_x = wl_fixed_to_double(x);
     double touch_y = wl_fixed_to_double(y);
 
-    if(app->touch_callback) {
+    app->active_touches++;
+
+    if(app->active_touches == 1 && app->touch_callback) {
         app->touch_callback(id, touch_x, touch_y, 0);
     }
 }
@@ -83,7 +85,12 @@ static void touch_handle_down(void *data, struct wl_touch *wl_touch,
 static void touch_handle_up(void *data, struct wl_touch *wl_touch,
                             uint32_t serial, uint32_t time, int32_t id) {
     Locus *app = data;
-    if(app->touch_callback) {
+    
+    if (app->active_touches > 0) {
+        app->active_touches--;
+    }
+
+    if(app->active_touches == 0 && app->touch_callback) {
         app->touch_callback(id, 0, 0, 1);
     }
 }
@@ -94,7 +101,7 @@ static void touch_handle_motion(void *data, struct wl_touch *wl_touch,
     Locus *app = data;
     double touch_x = wl_fixed_to_double(x);
     double touch_y = wl_fixed_to_double(y);
-    if(app->touch_callback) {
+    if(app->active_touches == 1 && app->touch_callback) {
         app->touch_callback(id, touch_x, touch_y, 2);
     }
 }
@@ -102,11 +109,20 @@ static void touch_handle_motion(void *data, struct wl_touch *wl_touch,
 static void touch_handle_frame(void *data, struct wl_touch *wl_touch) {
 }
 
+static void touch_handle_cancel(void *data, struct wl_touch *wl_touch) {
+    Locus *app = data;
+    app->active_touches = 0;
+    if (app->touch_callback) {
+        app->touch_callback(-1, 0, 0, 3);
+    }
+}
+
 static const struct wl_touch_listener touch_listener = {
     .down = touch_handle_down,
     .up = touch_handle_up,
     .motion = touch_handle_motion,
     .frame = touch_handle_frame,
+    .cancel = touch_handle_cancel,
 };
 
 static void handle_seat_capabilities(void *data, struct wl_seat *seat, 
