@@ -13,7 +13,7 @@ LOCUS_HEADERS += $(wildcard $(SRC)/*.h) $(wildcard $(SRC)/**/*.h)
 
 CFLAGS += -std=gnu99 -Wall -g -DWITH_WAYLAND_SHM -fPIC
 CFLAGS += $(shell pkg-config --cflags $(PKGS)) -I/usr/include/nanosvg/
-LDFLAGS += $(shell pkg-config --libs $(PKGS)) -lm -lutil -lrt -L/lib/aarch64-linux-gnu/libnanovg.a -lnanovg -L/lib/aarch64-linux-gnu/libnanosvg.a -lnanosvg
+LDFLAGS += $(shell pkg-config --libs $(PKGS)) -lm -lutil -lrt -L/lib/aarch64-linux-gnu/libnanovg.a -lnanovg -L/lib/aarch64-linux-gnu/libnanosvg.a -lnanosvg -L/lib/aarch64-linux-gnu/libnanosvgrast.a -lnanosvgrast
 
 WAYLAND_HEADERS = $(wildcard proto/*.xml)
 
