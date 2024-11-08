@@ -164,6 +164,7 @@ static void handle_layer_surface_configure(void *data,
         }
     }
     app->configured = 1;
+    wl_display_roundtrip(app->display);
     wl_surface_commit(app->surface);
 }
 
