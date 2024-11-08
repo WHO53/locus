@@ -299,7 +299,6 @@ void locus_create_window(Locus *app, const char *title) {
     xdg_toplevel_add_listener(app->xdg_toplevel, &xdg_toplevel_listener, app);
 
     xdg_toplevel_set_title(app->xdg_toplevel, title);
-    app->title = strdup(title);
 
     app->egl_window = wl_egl_window_create(app->surface, app->width, app->height);
     app->egl_surface = eglCreateWindowSurface(app->egl_display, app->egl_config, 
@@ -315,7 +314,6 @@ void locus_create_layer_surface(Locus *app, const char *title, uint32_t layer,
     app->layer_surface = zwlr_layer_shell_v1_get_layer_surface(
         app->layer_shell, app->surface, NULL, layer, title);
 
-    app->title = strdup(title);
     zwlr_layer_surface_v1_set_size(app->layer_surface, app->width, app->height);
     zwlr_layer_surface_v1_set_anchor(app->layer_surface, anchor);
     if (exclusive) {
@@ -435,9 +433,5 @@ void locus_cleanup(Locus *app) {
     if (app->display) {
         wl_display_disconnect(app->display);
         app->display = NULL;
-    }
-    if (app->title) {
-        free(app->title);
-        app->title = NULL;
     }
 }
